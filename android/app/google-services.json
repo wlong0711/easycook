@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1053541892911",
+    "project_id": "easycook-ca3d5",
+    "storage_bucket": "easycook-ca3d5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1053541892911:android:aafedb19dcdab2e457d7da",
+        "android_client_info": {
+          "package_name": "com.example.easycook"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCb0X6ED5ymHACYPugWkb1xe2awKyd_TI8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
