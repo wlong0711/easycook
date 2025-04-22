@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthViewModel extends ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -13,22 +14,46 @@ class AuthViewModel extends ChangeNotifier {
 
   // Sign Up
   Future<bool> signUp(String email, String password, String fullName, String phoneNumber) async {
-    _user = await _authService.signUp(email, password, fullName, phoneNumber);
-    if (_user != null) {
-      await fetchUserProfile();
-    }
-    notifyListeners();
-    return _user != null;
+    try {
+    UserCredential userCredential = await FirebaseAuth.instance
+        .createUserWithEmailAndPassword(email: email, password: password);
+
+    // ✅ Send email verification
+    await userCredential.user?.sendEmailVerification();
+
+    // ✅ Save additional profile info to Firestore
+    await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+      'fullName': fullName,
+      'phoneNumber': phoneNumber,
+      'email': email,
+    });
+
+    return true;
+  } catch (e) {
+    print("SignUp Error: $e");
+    return false;
+  }
   }
 
   // ✅ Ensure signIn method exists
   Future<bool> signIn(String email, String password) async {
-    _user = await _authService.signIn(email, password);
-    if (_user != null) {
-      await fetchUserProfile();
+    try {
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
+
+      if (!userCredential.user!.emailVerified) {
+        await FirebaseAuth.instance.signOut();  // Sign out the unverified user
+        throw FirebaseAuthException(
+          code: 'email-not-verified',
+          message: 'Please verify your email before logging in.',
+        );
+      }
+
+      return true;
+    } catch (e) {
+      print("Login Error: $e");
+      return false;
     }
-    notifyListeners();
-    return _user != null;
   }
 
   // ✅ Ensure resetPassword method exists
@@ -38,11 +63,23 @@ class AuthViewModel extends ChangeNotifier {
 
   // ✅ Fetch User Profile from Firestore
   Future<void> fetchUserProfile() async {
-    if (_user != null) {
-      _userProfile = await _authService.getUserProfile(_user!.uid);
-      notifyListeners();
+  try {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+
+      if (doc.exists) {
+        _userProfile = doc.data();
+        notifyListeners(); // ✅ Critical!
+      } else {
+        print("⚠️ User profile not found in Firestore.");
+      }
     }
+  } catch (e) {
+    print("Fetch User Profile Error: $e");
   }
+}
+
 
   // ✅ Update Profile (Firestore)
   Future<void> updateUserProfile(String fullName, String phoneNumber) async {

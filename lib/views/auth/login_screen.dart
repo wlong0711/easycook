@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/auth_viewmodel.dart';
-import '../main_screen.dart';  // ✅ Redirect to MainScreen
+import '../main_screen.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 import '../../utils/validators.dart';
@@ -17,6 +17,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
 
+  // 🔗 Replace this with your actual Firebase Storage image URL
+  final String logoUrl = 'https://firebasestorage.googleapis.com/v0/b/easycook-ca3d5.firebasestorage.app/o/EasyCook(logo).png?alt=media&token=4f03c781-15fa-43ef-b640-3d56367e541c';
+
   @override
   Widget build(BuildContext context) {
     final authViewModel = Provider.of<AuthViewModel>(context);
@@ -29,6 +32,15 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // ✅ Logo at the top
+              Image.network(
+                logoUrl,
+                height: 120,
+                errorBuilder: (context, error, stackTrace) =>
+                    Icon(Icons.image_not_supported, size: 100),
+              ),
+
+              SizedBox(height: 20),
               Text("Login", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
               SizedBox(height: 20),
 
@@ -59,15 +71,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
               SizedBox(height: 10),
 
-              // Forgot Password Link
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => ForgotPasswordScreen()),
-                    );
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => ForgotPasswordScreen()));
                   },
                   child: Text("Forgot Password?"),
                 ),
@@ -87,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     if (success) {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (context) => MainScreen()),  // ✅ Redirect to MainScreen
+                        MaterialPageRoute(builder: (_) => MainScreen()),
                       );
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -101,10 +109,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
               SizedBox(height: 10),
 
-              // Sign Up Link
               TextButton(
                 onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => SignUpScreen()));
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => SignUpScreen()));
                 },
                 child: Text("Don't have an account? Sign Up"),
               ),

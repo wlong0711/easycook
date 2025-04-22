@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../viewmodels/auth_viewmodel.dart';
-import 'user_details_screen.dart';  // ✅ Navigate to the new User Details Page
+import 'user_details_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -12,7 +12,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    Provider.of<AuthViewModel>(context, listen: false).fetchUserProfile();
+    // Provider.of<AuthViewModel>(context, listen: false).fetchUserProfile();
+    Provider.of<AuthViewModel>(context, listen: false).fetchUserProfile().then((_) {
+    print("✅ Profile fetched.");
+    });
+    
+    Future.delayed(Duration(seconds: 5), () {
+    if (Provider.of<AuthViewModel>(context, listen: false).userProfile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load profile. Please try again.")),
+      );
+    }
+  });
   }
 
   @override
@@ -27,17 +38,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: Colors.orange,
       ),
       body: userProfile == null
-          ? Center(child: CircularProgressIndicator())  // Loading indicator
+          ? Center(child: CircularProgressIndicator())
           : Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Profile Header (Username & Picture) - Click to Open Details
                 GestureDetector(
                   onTap: () {
-                    // ✅ Navigate to User Details Page
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => UserDetailsScreen()),
+                      MaterialPageRoute(builder: (_) => UserDetailsScreen()),
                     );
                   },
                   child: Container(
@@ -55,21 +64,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
-                        // Profile Picture
+                        // ✅ Safe profile picture rendering
                         CircleAvatar(
                           radius: 40,
-                          backgroundImage: userProfile["profilePic"] != ""
+                          backgroundImage: (userProfile["profilePic"] != null &&
+                                  userProfile["profilePic"] != "")
                               ? NetworkImage(userProfile["profilePic"])
                               : null,
-                          child: userProfile["profilePic"] == ""
+                          child: (userProfile["profilePic"] == null ||
+                                  userProfile["profilePic"] == "")
                               ? Icon(Icons.person, size: 50, color: Colors.white)
                               : null,
                         ),
                         SizedBox(width: 15),
 
-                        // Username
+                        // ✅ Safe username display
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

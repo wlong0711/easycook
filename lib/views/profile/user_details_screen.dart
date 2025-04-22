@@ -28,34 +28,37 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ✅ Profile picture with null-safe check
                   Center(
                     child: CircleAvatar(
                       radius: 60,
-                      backgroundImage: userProfile["profilePic"] != ""
+                      backgroundImage: (userProfile["profilePic"] != null &&
+                              userProfile["profilePic"] != "")
                           ? NetworkImage(userProfile["profilePic"])
                           : null,
-                      child: userProfile["profilePic"] == ""
+                      child: (userProfile["profilePic"] == null ||
+                              userProfile["profilePic"] == "")
                           ? Icon(Icons.person, size: 80, color: Colors.white)
                           : null,
                     ),
                   ),
                   SizedBox(height: 20),
 
-                  // Full Name
+                  // ✅ Full Name
                   ListTile(
                     leading: Icon(Icons.person, color: Colors.orange),
                     title: Text(userProfile["fullName"] ?? "No Name"),
                     subtitle: Text("Full Name"),
                   ),
 
-                  // Phone Number
+                  // ✅ Phone Number
                   ListTile(
                     leading: Icon(Icons.phone, color: Colors.orange),
                     title: Text(userProfile["phoneNumber"] ?? "No Phone Number"),
                     subtitle: Text("Phone Number"),
                   ),
 
-                  // Email
+                  // ✅ Email
                   ListTile(
                     leading: Icon(Icons.email, color: Colors.orange),
                     title: Text(authViewModel.user?.email ?? "No Email"),
@@ -64,26 +67,25 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
 
                   SizedBox(height: 20),
 
-                  // ✅ Navigate to Edit Profile Screen
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => EditProfileScreen()),
-                    );
-                  },
-                  child: Text("Edit Profile"),
-                ),
+                  // ✅ Edit Profile Button
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => EditProfileScreen()),
+                      );
+                    },
+                    child: Text("Edit Profile"),
+                  ),
                   
                   SizedBox(height: 20),
 
-                  // 🔴 Logout Button
+                  // ✅ Logout Button
                   Center(
                     child: ElevatedButton.icon(
                       onPressed: () async {
                         await authViewModel.signOut();
 
-                        // Redirect to Login Screen
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(builder: (context) => LoginScreen()),

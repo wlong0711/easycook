@@ -13,6 +13,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isLoading = true;
   TextEditingController _searchController = TextEditingController();
 
+  // 🔗 Replace this with your actual Firebase Storage logo URL
+  final String logoUrl = 'https://firebasestorage.googleapis.com/v0/b/easycook-ca3d5.firebasestorage.app/o/EasyCook(logo).png?alt=media&token=4f03c781-15fa-43ef-b640-3d56367e541c';
+
   @override
   void initState() {
     super.initState();
@@ -57,17 +60,32 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: null,
       body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ✅ App Logo
+            Center(
+              child: Image.network(
+                logoUrl,
+                height: 100,
+                errorBuilder: (context, error, stackTrace) =>
+                    Icon(Icons.image_not_supported, size: 80),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // ✅ App Title
             Center(
               child: Text(
                 "EasyCook",
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
             ),
-            SizedBox(height: 10),
+
+            const SizedBox(height: 10),
+
+            // ✅ Search Field
             TextField(
               controller: _searchController,
               onSubmitted: (value) => searchRecipes(),
@@ -90,7 +108,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            SizedBox(height: 20),
+
+            const SizedBox(height: 20),
+
+            // ✅ Recipe Grid
             Expanded(
               child: isLoading
                   ? Center(child: CircularProgressIndicator())
@@ -127,7 +148,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                       fit: BoxFit.cover,
                                       width: double.infinity,
                                       height: double.infinity,
-                                      errorBuilder: (context, error, stackTrace) => Image.asset('assets/images/placeholder.png'),
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          Image.asset('assets/images/placeholder.png'),
                                     ),
                                   ),
                                   Positioned(

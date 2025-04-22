@@ -13,9 +13,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();  // ✅ New Phone Number Field
+  final TextEditingController _phoneController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
+
+  // 🔗 Replace with your actual Firebase Storage logo URL
+  final String logoUrl = 'https://firebasestorage.googleapis.com/v0/b/easycook-ca3d5.firebasestorage.app/o/EasyCook(logo).png?alt=media&token=4f03c781-15fa-43ef-b640-3d56367e541c';
 
   @override
   Widget build(BuildContext context) {
@@ -23,13 +26,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text("Sign Up")),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Form(
-          key: _formKey,  // ✅ Form validation
+          key: _formKey,
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // ✅ Logo at top
+              Image.network(
+                logoUrl,
+                height: 120,
+                errorBuilder: (context, error, stackTrace) => Icon(Icons.image_not_supported, size: 100),
+              ),
+              SizedBox(height: 20),
+
               // Full Name Field
               TextFormField(
                 controller: _nameController,
@@ -87,18 +97,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       _emailController.text.trim(),
                       _passwordController.text.trim(),
                       _nameController.text.trim(),
-                      _phoneController.text.trim(), // ✅ Include phone number
+                      _phoneController.text.trim(),
                     );
 
                     if (success) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Account created successfully!")),
+                        SnackBar(content: Text("Verification email sent. Please check your inbox.")),
                       );
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(builder: (context) => LoginScreen()),
                       );
-                    } else {
+                    }
+                    else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text("Sign-up failed. Try again.")),
                       );
