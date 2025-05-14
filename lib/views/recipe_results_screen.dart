@@ -4,8 +4,8 @@ import 'package:http/http.dart' as http;
 import 'recipe_details_screen.dart';
 
 class RecipeResultsScreen extends StatefulWidget {
-  final String? ingredients; // For pantry search
-  final String? filterType;  // 'cuisine' or 'diet'
+  final String? ingredients; // From pantry
+  final String? filterType;  // e.g., 'cuisine'
   final String? filterValue;
 
   const RecipeResultsScreen({
@@ -22,8 +22,7 @@ class RecipeResultsScreen extends StatefulWidget {
 class _RecipeResultsScreenState extends State<RecipeResultsScreen> {
   List recipes = [];
   bool isLoading = true;
-
-  final String apiKey = '52a3569d728c4360aeec59f495f43626'; 
+  final String apiKey = '52a3569d728c4360aeec59f495f43626';
 
   @override
   void initState() {
@@ -35,33 +34,28 @@ class _RecipeResultsScreenState extends State<RecipeResultsScreen> {
     String url;
 
     if (widget.ingredients != null && widget.ingredients!.isNotEmpty) {
-      // 🔍 Pantry ingredients search
-      url =
-          'https://api.spoonacular.com/recipes/findByIngredients?ingredients=${widget.ingredients}&number=10&apiKey=$apiKey';
+      url = 'https://api.spoonacular.com/recipes/findByIngredients?ingredients=${widget.ingredients}&number=10&apiKey=$apiKey';
     } else if (widget.filterType != null && widget.filterValue != null) {
-      // 🍜 Category search (cuisine/diet)
-      url =
-          'https://api.spoonacular.com/recipes/complexSearch?${widget.filterType}=${widget.filterValue}&number=10&apiKey=$apiKey';
+      url = 'https://api.spoonacular.com/recipes/complexSearch?${widget.filterType}=${widget.filterValue}&number=10&apiKey=$apiKey';
     } else {
-      // Fallback (optional)
-      url =
-          'https://api.spoonacular.com/recipes/random?number=10&apiKey=$apiKey';
+      url = 'https://api.spoonacular.com/recipes/random?number=10&apiKey=$apiKey';
     }
 
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        if (!mounted) return;
         setState(() {
           recipes = data is List ? data : data['results'] ?? [];
           isLoading = false;
         });
       } else {
-        print('Error ${response.statusCode}');
+        if (!mounted) return;
         setState(() => isLoading = false);
       }
     } catch (e) {
-      print('Exception: $e');
+      if (!mounted) return;
       setState(() => isLoading = false);
     }
   }
@@ -69,41 +63,85 @@ class _RecipeResultsScreenState extends State<RecipeResultsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: Text('Recipe Results'),
+        title: Text("Recipe Results"),
+        backgroundColor: Colors.orange,
       ),
       body: isLoading
           ? Center(child: CircularProgressIndicator())
           : recipes.isEmpty
-              ? Center(child: Text("No recipes found."))
-              : ListView.builder(
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.search_off, size: 60, color: Colors.grey),
+                      SizedBox(height: 10),
+                      Text("No recipes found.",
+                          style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                    ],
+                  ),
+                )
+              : GridView.builder(
+                  padding: EdgeInsets.all(16),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    childAspectRatio: 3 / 4,
+                  ),
                   itemCount: recipes.length,
                   itemBuilder: (context, index) {
                     final recipe = recipes[index];
                     final imageUrl = (recipe['image'] ?? '').replaceAll(RegExp(r'\.+$'), '');
 
-                    return Card(
-                      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      child: ListTile(
-                        leading: imageUrl.isNotEmpty
-                            ? Image.network(
-                                imageUrl,
-                                width: 60,
-                                height: 60,
-                                errorBuilder: (_, __, ___) => Icon(Icons.broken_image),
-                              )
-                            : Icon(Icons.image_not_supported),
-                        title: Text(recipe['title'] ?? 'No Title'),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => RecipeDetailsScreen(
-                                recipeId: recipe['id'],
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => RecipeDetailsScreen(recipeId: recipe['id']),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 6,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                              child: Image.network(
+                                imageUrl.isNotEmpty
+                                    ? imageUrl
+                                    : 'https://via.placeholder.com/150',
+                                height: 130,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    Image.asset('assets/images/placeholder.png', height: 130, fit: BoxFit.cover),
                               ),
                             ),
-                          );
-                        },
+                            Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Text(
+                                recipe['title'] ?? 'No Title',
+                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },

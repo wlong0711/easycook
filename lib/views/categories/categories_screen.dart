@@ -8,19 +8,22 @@ class CategoriesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: null,
+      backgroundColor: Colors.grey[100],
+      appBar: AppBar(
+        title: const Text("Categories"),
+        centerTitle: true,
+        backgroundColor: Colors.orange,
+      ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Text(
-                "Categories",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
+            Text(
+              "Discover by Category",
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
             CategoryButton(
               label: "Cuisines",
               emoji: "🍜",
@@ -29,7 +32,7 @@ class CategoriesScreen extends StatelessWidget {
                 MaterialPageRoute(builder: (_) => const CuisinesScreen()),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             CategoryButton(
               label: "Diets",
               emoji: "🥗",
@@ -62,23 +65,23 @@ class CategoryButton extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
-              blurRadius: 5,
-              offset: const Offset(0, 4),
+              color: Colors.black12,
+              blurRadius: 6,
+              offset: Offset(0, 2),
             ),
           ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-            Text(emoji, style: const TextStyle(fontSize: 20)),
+            Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            Text(emoji, style: const TextStyle(fontSize: 22)),
           ],
         ),
       ),

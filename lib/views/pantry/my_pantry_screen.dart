@@ -83,104 +83,106 @@ class _MyPantryScreenState extends State<MyPantryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: null,
+      backgroundColor: Colors.grey[100],
+      appBar: AppBar(
+        title: Text("My Pantry"),
+        backgroundColor: Colors.orange,
+        centerTitle: true,
+      ),
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header
             Center(
-              child: Text("Ingredients", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            ),
-            SizedBox(height: 6),
-            Center(
-              child: Text("Explore Recipes with Available Ingredients",
-                  style: TextStyle(fontSize: 14, color: Colors.grey[700])),
+              child: Column(
+                children: [
+                  Text("What's in your pantry?", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 6),
+                  Text("Select ingredients to explore matching recipes",
+                      style: TextStyle(fontSize: 14, color: Colors.grey[700])),
+                ],
+              ),
             ),
             SizedBox(height: 20),
 
-            // Add ingredient field
+            // Add Ingredient Field
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _controller,
                     decoration: InputDecoration(
-                      hintText: "Add Your Ingredients Here",
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                      hintText: "Add ingredients (e.g. onion, egg)",
+                      prefixIcon: Icon(Icons.food_bank_outlined),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 16),
                     ),
                     onSubmitted: _addIngredient,
                   ),
                 ),
                 SizedBox(width: 10),
                 ElevatedButton(
-                  onPressed: () {}, // Camera scan feature placeholder
+                  onPressed: () {}, // Placeholder for camera scan
                   style: ElevatedButton.styleFrom(
                     shape: CircleBorder(),
                     padding: EdgeInsets.all(12),
-                    backgroundColor: Colors.grey.shade200,
+                    backgroundColor: Colors.white,
+                    elevation: 2,
                   ),
-                  child: Icon(Icons.camera_alt, color: Colors.black),
+                  child: Icon(Icons.camera_alt, color: Colors.orange),
                 )
               ],
             ),
-            SizedBox(height: 20),
 
-            // Ingredient checklist
+            SizedBox(height: 25),
+
+            // Ingredient Checklist
             if (_ingredients.isNotEmpty) ...[
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 8,
-                      offset: Offset(0, 4),
-                    )
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("What's in my pantry", style: TextStyle(fontWeight: FontWeight.bold)),
-                    SizedBox(height: 10),
-                    ..._ingredients.map((ingredient) => Row(
-                          children: [
-                            Checkbox(
-                              value: _selectedIngredients.contains(ingredient),
-                              onChanged: (val) => _toggleSelection(ingredient, val),
-                            ),
-                            Expanded(child: Text(ingredient)),
-                            IconButton(
-                              icon: Icon(Icons.delete, size: 18),
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
+                    ],
+                  ),
+                  child: ListView(
+                    children: [
+                      Text("Your Ingredients", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Divider(),
+                      ..._ingredients.map((ingredient) => CheckboxListTile(
+                            value: _selectedIngredients.contains(ingredient),
+                            onChanged: (val) => _toggleSelection(ingredient, val),
+                            title: Text(ingredient),
+                            controlAffinity: ListTileControlAffinity.leading,
+                            secondary: IconButton(
+                              icon: Icon(Icons.delete_outline, color: Colors.redAccent),
                               onPressed: () => _removeIngredient(ingredient),
-                            )
-                          ],
-                        ))
-                  ],
+                            ),
+                          )),
+                    ],
+                  ),
                 ),
               ),
-              SizedBox(height: 30),
+              SizedBox(height: 20),
             ],
 
-            // Explore Recipes button
+            // Explore Button
             Center(
-              child: ElevatedButton(
+              child: ElevatedButton.icon(
                 onPressed: _exploreRecipes,
+                icon: Icon(Icons.restaurant_menu_outlined),
+                label: Text("Explore Recipes", style: TextStyle(fontSize: 16)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey.shade700,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: Text("Explore Recipes", style: TextStyle(fontSize: 16)),
               ),
             ),
           ],

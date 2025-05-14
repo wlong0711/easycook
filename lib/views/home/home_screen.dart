@@ -11,10 +11,10 @@ class _HomeScreenState extends State<HomeScreen> {
   final SpoonacularService _spoonacularService = SpoonacularService();
   List recipes = [];
   bool isLoading = true;
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
-  // 🔗 Replace this with your actual Firebase Storage logo URL
-  final String logoUrl = 'https://firebasestorage.googleapis.com/v0/b/easycook-ca3d5.firebasestorage.app/o/EasyCook(logo).png?alt=media&token=4f03c781-15fa-43ef-b640-3d56367e541c';
+  final String logoUrl =
+      'https://firebasestorage.googleapis.com/v0/b/easycook-ca3d5.firebasestorage.app/o/EasyCook(logo).png?alt=media&token=4f03c781-15fa-43ef-b640-3d56367e541c';
 
   @override
   void initState() {
@@ -25,12 +25,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> fetchRandomRecipes() async {
     try {
       var data = await _spoonacularService.getRandomRecipes();
+      if (!mounted) return;
       setState(() {
         recipes = data;
         isLoading = false;
       });
     } catch (e) {
       print('Error fetching recipes: $e');
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
@@ -43,12 +45,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       var data = await _spoonacularService.searchRecipes(_searchController.text);
+      if (!mounted) return;
       setState(() {
         recipes = data;
         isLoading = false;
       });
     } catch (e) {
       print('Error searching recipes: $e');
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
@@ -58,125 +62,155 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: null,
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ✅ App Logo
-            Center(
-              child: Image.network(
-                logoUrl,
-                height: 100,
-                errorBuilder: (context, error, stackTrace) =>
-                    Icon(Icons.image_not_supported, size: 80),
+      backgroundColor: Colors.grey[100],
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ✅ Logo + Title
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.network(
+                    logoUrl,
+                    height: 60,
+                    errorBuilder: (_, __, ___) => Icon(Icons.image_not_supported, size: 60),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    "EasyCook",
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 10),
+              const SizedBox(height: 20),
 
-            // ✅ App Title
-            Center(
-              child: Text(
-                "EasyCook",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            // ✅ Search Field
-            TextField(
-              controller: _searchController,
-              onSubmitted: (value) => searchRecipes(),
-              decoration: InputDecoration(
-                hintText: "Type your recipe name or keywords",
-                prefixIcon: Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(Icons.clear),
-                        onPressed: () {
-                          setState(() {
-                            _searchController.clear();
-                            fetchRandomRecipes();
-                          });
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+              // ✅ Search Bar
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
+                  ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  onSubmitted: (_) => searchRecipes(),
+                  decoration: InputDecoration(
+                    hintText: "Search for recipes...",
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    prefixIcon: Icon(Icons.search),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear),
+                            onPressed: () {
+                              setState(() {
+                                _searchController.clear();
+                                fetchRandomRecipes();
+                              });
+                            },
+                          )
+                        : null,
+                  ),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            // ✅ Recipe Grid
-            Expanded(
-              child: isLoading
-                  ? Center(child: CircularProgressIndicator())
-                  : recipes.isEmpty
-                      ? Center(child: Text("No recipes found. Try different keywords."))
-                      : GridView.builder(
-                          itemCount: recipes.length,
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 10,
-                            mainAxisSpacing: 10,
-                          ),
-                          itemBuilder: (context, index) {
-                            final recipe = recipes[index];
-                            String imageUrl = (recipe['image'] ?? '').replaceAll(RegExp(r'\.+\$'), '');
+              // ✅ Recipe Grid
+              Expanded(
+                child: isLoading
+                    ? Center(child: CircularProgressIndicator())
+                    : recipes.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.search_off, size: 48, color: Colors.grey),
+                                const SizedBox(height: 10),
+                                Text("No recipes found. Try a different search.",
+                                    style: TextStyle(color: Colors.grey[600])),
+                              ],
+                            ),
+                          )
+                        : GridView.builder(
+                            itemCount: recipes.length,
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 14,
+                              mainAxisSpacing: 14,
+                              childAspectRatio: 3 / 4,
+                            ),
+                            itemBuilder: (context, index) {
+                              final recipe = recipes[index];
+                              final imageUrl = (recipe['image'] ?? '')
+                                  .replaceAll(RegExp(r'\.+\$'), '');
 
-                            return GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => RecipeDetailsScreen(recipeId: recipe['id']),
-                                  ),
-                                );
-                              },
-                              child: Stack(
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(10),
-                                    child: Image.network(
-                                      imageUrl.isNotEmpty
-                                          ? imageUrl
-                                          : 'https://via.placeholder.com/150',
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                      errorBuilder: (context, error, stackTrace) =>
-                                          Image.asset('assets/images/placeholder.png'),
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => RecipeDetailsScreen(recipeId: recipe['id']),
                                     ),
-                                  ),
-                                  Positioned(
-                                    bottom: 10,
-                                    left: 10,
-                                    child: Text(
-                                      recipe['title'] ?? '',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        backgroundColor: Colors.black45,
+                                  );
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(16),
+                                    color: Colors.white,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black12,
+                                        blurRadius: 6,
+                                        offset: Offset(0, 2),
                                       ),
-                                    ),
+                                    ],
                                   ),
-                                  Positioned(
-                                    top: 10,
-                                    right: 10,
-                                    child: Icon(Icons.favorite_border, color: Colors.white),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius:
+                                            BorderRadius.vertical(top: Radius.circular(16)),
+                                        child: Image.network(
+                                          imageUrl.isNotEmpty
+                                              ? imageUrl
+                                              : 'https://via.placeholder.com/150',
+                                          height: 120,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              Image.asset('assets/images/placeholder.png',
+                                                  height: 120, fit: BoxFit.cover),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(10),
+                                          child: Text(
+                                            recipe['title'] ?? '',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 14,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-            ),
-          ],
+                                ),
+                              );
+                            },
+                          ),
+              ),
+            ],
+          ),
         ),
       ),
     );
