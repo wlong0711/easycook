@@ -10,20 +10,33 @@ class IngredientRecognitionService {
 
     final content = [
       Content.multi([
-        TextPart("What ingredients are shown in this image? Respond with a list."),
+        TextPart(
+          "You are an AI food assistant. Based on the photo, "
+          "detect only edible cooking ingredients such as vegetables, fruits, spices, or meats. "
+          "Respond only with a bullet-point list using this format:\n"
+          "* Tomato\n* Onion\n* Garlic\n\n"
+          "If there are no recognizable ingredients in the image, respond with exactly: 'No ingredients found.'"
+        ),
         DataPart('image/jpeg', bytes),
       ])
     ];
 
+
     final response = await model.generateContent(content);
-    final text = response.text;
+    final rawText = response.text;
 
-    if (text == null) return [];
+    if (rawText == null || rawText.trim().toLowerCase().contains("no ingredients found")) {
+      return [];
+    }
 
-    return text
-        .split(RegExp(r'\n|-')) // split lines
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
+    return rawText
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) =>
+            line.isNotEmpty &&
+            (line.startsWith("*") || line.startsWith("-")) &&
+            line.length > 2)
+        .map((line) => line.replaceAll(RegExp(r'^[-*]\s*'), '')) // remove "* " or "- "
         .toList();
   }
 }

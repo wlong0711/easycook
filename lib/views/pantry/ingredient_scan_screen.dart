@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/ingredient_recognition_service.dart';
+import '../recipe_results_screen.dart';
 
 class IngredientScanScreen extends StatefulWidget {
   const IngredientScanScreen({super.key});
@@ -64,7 +65,18 @@ class _IngredientScanScreenState extends State<IngredientScanScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Added to pantry successfully!")),
     );
-    Navigator.pop(context, _selected.toList()); // Return to pantry screen
+    Navigator.pop(context, _selected.toList());
+  }
+
+  void _exploreWithSelectedIngredients() {
+    if (_selected.isEmpty) return;
+    final query = _selected.join(',');
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RecipeResultsScreen(ingredients: query),
+      ),
+    );
   }
 
   void _showImagePickerOptions() {
@@ -105,7 +117,7 @@ class _IngredientScanScreenState extends State<IngredientScanScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Scan Ingredients"),
+        title: const Text("Scan Ingredients"),
         backgroundColor: Colors.orange,
       ),
       body: Padding(
@@ -114,60 +126,143 @@ class _IngredientScanScreenState extends State<IngredientScanScreen> {
           children: [
             ElevatedButton.icon(
               onPressed: _showImagePickerOptions,
-              icon: Icon(Icons.image_search),
-              label: Text("Pick or Take a Photo"),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+              icon: const Icon(Icons.image_search),
+              label: const Text("Pick or Take a Photo"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                elevation: 3,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+              ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
+
+            if (_image == null && !_loading && _ingredients.isEmpty)
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.photo_camera_back, size: 90, color: Colors.orange),
+                      SizedBox(height: 16),
+                      Text(
+                        "Start by picking or taking a photo\nof ingredients you want to scan.",
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
             if (_image != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.file(_image!, height: 200),
               ),
+
             const SizedBox(height: 20),
+
             if (_loading)
               const CircularProgressIndicator()
             else if (_ingredients.isNotEmpty)
               Expanded(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Select ingredients to add:",
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: _ingredients.length,
-                        itemBuilder: (context, index) {
-                          final item = _ingredients[index];
-                          return CheckboxListTile(
-                            value: _selected.contains(item),
-                            onChanged: (checked) {
-                              setState(() {
-                                if (checked == true) {
-                                  _selected.add(item);
-                                } else {
-                                  _selected.remove(item);
-                                }
-                              });
-                            },
-                            title: Text(item),
-                          );
-                        },
-                      ),
+                    const Text(
+                      "Select ingredients to add:",
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(height: 10),
-                    ElevatedButton.icon(
-                      onPressed: _addSelectedToPantry,
-                      icon: Icon(Icons.add),
-                      label: Text("Add to Pantry"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        padding: EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 5,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ListView.builder(
+                          itemCount: _ingredients.length,
+                          itemBuilder: (context, index) {
+                            final item = _ingredients[index];
+                            return CheckboxListTile(
+                              value: _selected.contains(item),
+                              onChanged: (checked) {
+                                setState(() {
+                                  if (checked == true) {
+                                    _selected.add(item);
+                                  } else {
+                                    _selected.remove(item);
+                                  }
+                                });
+                              },
+                              title: Text(item),
+                              controlAffinity: ListTileControlAffinity.leading,
+                            );
+                          },
+                        ),
                       ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: _selected.isEmpty ? null : _addSelectedToPantry,
+                          icon: const Icon(Icons.add),
+                          label: const Text("Add to Pantry"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton.icon(
+                          onPressed: _selected.isEmpty ? null : _exploreWithSelectedIngredients,
+                          icon: const Icon(Icons.restaurant_menu),
+                          label: const Text("Explore Recipes"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               )
+            else if (_image != null)
+              Expanded(
+                child: Column(
+                  children: const [
+                    SizedBox(height: 50),
+                    Icon(Icons.sentiment_dissatisfied_outlined,
+                        size: 60, color: Colors.redAccent),
+                    SizedBox(height: 12),
+                    Text(
+                      "No ingredients found in the image.",
+                      style: TextStyle(color: Colors.redAccent, fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
