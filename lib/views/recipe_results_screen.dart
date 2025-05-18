@@ -34,11 +34,14 @@ class _RecipeResultsScreenState extends State<RecipeResultsScreen> {
     String url;
 
     if (widget.ingredients != null && widget.ingredients!.isNotEmpty) {
-      url = 'https://api.spoonacular.com/recipes/findByIngredients?ingredients=${widget.ingredients}&number=10&apiKey=$apiKey';
+      url =
+          'https://api.spoonacular.com/recipes/complexSearch?includeIngredients=${widget.ingredients}&addRecipeNutrition=true&number=10&apiKey=$apiKey';
     } else if (widget.filterType != null && widget.filterValue != null) {
-      url = 'https://api.spoonacular.com/recipes/complexSearch?${widget.filterType}=${widget.filterValue}&number=10&apiKey=$apiKey';
+      url =
+          'https://api.spoonacular.com/recipes/complexSearch?${widget.filterType}=${widget.filterValue}&addRecipeNutrition=true&number=10&apiKey=$apiKey';
     } else {
-      url = 'https://api.spoonacular.com/recipes/random?number=10&apiKey=$apiKey';
+      url =
+          'https://api.spoonacular.com/recipes/random?number=10&addRecipeNutrition=true&apiKey=$apiKey';
     }
 
     try {
@@ -60,31 +63,42 @@ class _RecipeResultsScreenState extends State<RecipeResultsScreen> {
     }
   }
 
+  String getCalories(Map<String, dynamic> recipe) {
+    try {
+      final nutrients = recipe['nutrition']?['nutrients'];
+      if (nutrients is List) {
+        final cal = nutrients.firstWhere((n) => n['name'] == 'Calories', orElse: () => null);
+        return cal != null ? "${cal['amount'].round()} kcal" : "– kcal";
+      }
+    } catch (_) {}
+    return "– kcal";
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: Text("Recipe Results"),
+        title: const Text("Recipe Results"),
         backgroundColor: Colors.orange,
       ),
       body: isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : recipes.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
+                    children: const [
                       Icon(Icons.search_off, size: 60, color: Colors.grey),
                       SizedBox(height: 10),
                       Text("No recipes found.",
-                          style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                          style: TextStyle(fontSize: 16, color: Colors.grey)),
                     ],
                   ),
                 )
               : GridView.builder(
-                  padding: EdgeInsets.all(16),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     mainAxisSpacing: 16,
                     crossAxisSpacing: 16,
@@ -120,24 +134,42 @@ class _RecipeResultsScreenState extends State<RecipeResultsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             ClipRRect(
-                              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                              borderRadius:
+                                  const BorderRadius.vertical(top: Radius.circular(16)),
                               child: Image.network(
                                 imageUrl.isNotEmpty
                                     ? imageUrl
                                     : 'https://via.placeholder.com/150',
                                 height: 130,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) =>
-                                    Image.asset('assets/images/placeholder.png', height: 130, fit: BoxFit.cover),
+                                errorBuilder: (_, __, ___) => Image.asset(
+                                  'assets/images/placeholder.png',
+                                  height: 130,
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
                             Padding(
                               padding: const EdgeInsets.all(12.0),
-                              child: Text(
-                                recipe['title'] ?? 'No Title',
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    recipe['title'] ?? 'No Title',
+                                    style: const TextStyle(
+                                        fontSize: 15, fontWeight: FontWeight.w600),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    getCalories(recipe),
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],

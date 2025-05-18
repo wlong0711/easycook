@@ -147,8 +147,23 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             itemBuilder: (context, index) {
                               final recipe = recipes[index];
-                              final imageUrl = (recipe['image'] ?? '')
-                                  .replaceAll(RegExp(r'\.+\$'), '');
+                              final imageUrl = (recipe['image'] ?? '').replaceAll(RegExp(r'\.+\$'), '');
+
+                              String getCalories(Map<String, dynamic> recipe) {
+                                try {
+                                  final nutrients = recipe['nutrition']?['nutrients'];
+                                  if (nutrients is List) {
+                                    final cal = nutrients.firstWhere(
+                                      (n) => n['name'] == 'Calories',
+                                      orElse: () => null,
+                                    );
+                                    return cal != null ? "${cal['amount'].round()} kcal" : "– kcal";
+                                  }
+                                } catch (e) {
+                                  print("Calorie parse error: $e");
+                                }
+                                return "– kcal";
+                              }
 
                               return GestureDetector(
                                 onTap: () {
@@ -175,8 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.stretch,
                                     children: [
                                       ClipRRect(
-                                        borderRadius:
-                                            BorderRadius.vertical(top: Radius.circular(16)),
+                                        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                                         child: Image.network(
                                           imageUrl.isNotEmpty
                                               ? imageUrl
@@ -184,22 +198,26 @@ class _HomeScreenState extends State<HomeScreen> {
                                           height: 120,
                                           fit: BoxFit.cover,
                                           errorBuilder: (_, __, ___) =>
-                                              Image.asset('assets/images/placeholder.png',
-                                                  height: 120, fit: BoxFit.cover),
+                                              Image.asset('assets/images/placeholder.png', height: 120, fit: BoxFit.cover),
                                         ),
                                       ),
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(10),
-                                          child: Text(
-                                            recipe['title'] ?? '',
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 14,
+                                      Padding(
+                                        padding: const EdgeInsets.all(10),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              recipe['title'] ?? '',
+                                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
                                             ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              getCalories(recipe),
+                                              style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
