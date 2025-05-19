@@ -17,12 +17,17 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
   bool isLoading = true;
   bool isFavorited = false;
 
+  String selectedFolderId = 'uncategorized';
+  String selectedFolderName = 'Uncategorized';
+  List<Map<String, dynamic>> folders = [];
+
   final String apiKey = '52a3569d728c4360aeec59f495f43626';
 
   @override
   void initState() {
     super.initState();
     fetchRecipeDetails();
+    fetchFolders();
     checkIfFavorited();
   }
 
@@ -33,8 +38,7 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-
-        if (!mounted) return; // ✅ Prevent calling setState after dispose
+        if (!mounted) return;
         setState(() {
           recipe = data;
           isLoading = false;
@@ -55,32 +59,84 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
     }
   }
 
+  Future<void> fetchFolders() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('recipeFolders')
+        .orderBy('createdAt', descending: true)
+        .get();
+
+    final List<Map<String, dynamic>> fetchedFolders = [];
+
+    for (var doc in snapshot.docs) {
+      if (doc.id == 'uncategorized') {
+        fetchedFolders.insert(0, {
+          'id': doc.id,
+          'name': doc['name'],
+        });
+      } else {
+        fetchedFolders.add({
+          'id': doc.id,
+          'name': doc['name'],
+        });
+      }
+    }
+
+    setState(() {
+      folders = fetchedFolders;
+    });
+  }
 
   Future<void> checkIfFavorited() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('favorites')
-        .doc(widget.recipeId.toString())
-        .get();
+    try {
+      final foldersSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('recipeFolders')
+          .get();
 
-    setState(() {
-      isFavorited = doc.exists;
-    });
+      for (var folder in foldersSnapshot.docs) {
+        final recipeDoc = await folder.reference
+            .collection('recipes')
+            .doc(widget.recipeId.toString())
+            .get();
+
+        if (recipeDoc.exists) {
+          setState(() {
+            isFavorited = true;
+          });
+          return;
+        }
+      }
+
+      // Not found in any folder
+      setState(() {
+        isFavorited = false;
+      });
+    } catch (e) {
+      print("Error checking favorite status: $e");
+    }
   }
 
   Future<void> toggleFavorite() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || recipe == null) return;
 
+    final recipeId = widget.recipeId.toString();
     final docRef = FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
-        .collection('favorites')
-        .doc(widget.recipeId.toString());
+        .collection('recipeFolders')
+        .doc(selectedFolderId)
+        .collection('recipes')
+        .doc(recipeId);
 
     try {
       if (isFavorited) {
@@ -89,7 +145,7 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
           isFavorited = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Removed from favorites')),
+          SnackBar(content: Text('Removed from ${selectedFolderName}')),
         );
       } else {
         await docRef.set({
@@ -101,7 +157,7 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
           isFavorited = true;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Added to favorites')),
+          SnackBar(content: Text('Saved to $selectedFolderName')),
         );
       }
     } catch (e) {
@@ -112,7 +168,31 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(recipe?['title'] ?? 'Recipe Details')),
+      appBar: AppBar(
+        title: Text(recipe?['title'] ?? 'Recipe Details'),
+        backgroundColor: Colors.orange,
+        actions: [
+          if (!isLoading && recipe != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: DropdownButton<String>(
+                value: selectedFolderId,
+                onChanged: (value) {
+                  setState(() {
+                    selectedFolderId = value!;
+                    selectedFolderName = folders.firstWhere((f) => f['id'] == value)['name'];
+                  });
+                },
+                items: folders.map<DropdownMenuItem<String>>((folder) {
+                  return DropdownMenuItem<String>(
+                    value: folder['id'] as String,
+                    child: Text(folder['name'] as String),
+                  );
+                }).toList(),
+              ),
+            )
+        ],
+      ),
       floatingActionButton: recipe == null
           ? null
           : FloatingActionButton(
@@ -122,7 +202,7 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
                 Icons.favorite,
                 color: isFavorited ? Colors.red : Colors.grey[400],
               ),
-              tooltip: isFavorited ? 'Remove from Favorites' : 'Add to Favorites',
+              tooltip: isFavorited ? 'Remove from Folder' : 'Save to Folder',
             ),
       body: isLoading
           ? Center(child: CircularProgressIndicator())
@@ -134,7 +214,8 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Image.network(
-                        (recipe?['image'] ?? 'https://via.placeholder.com/300').replaceAll(RegExp(r'\.+\$'), ''),
+                        (recipe?['image'] ?? 'https://via.placeholder.com/300')
+                            .replaceAll(RegExp(r'\.+\$'), ''),
                         errorBuilder: (context, error, stackTrace) =>
                             Image.asset('assets/images/placeholder.png'),
                         height: 200,
