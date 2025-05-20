@@ -15,11 +15,10 @@ class RecipeDetailsScreen extends StatefulWidget {
 class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
   Map<String, dynamic>? recipe;
   bool isLoading = true;
-  bool isFavorited = false;
 
-  String selectedFolderId = 'uncategorized';
-  String selectedFolderName = 'Uncategorized';
+  // Folder list: each with id, name, and whether recipe is saved there
   List<Map<String, dynamic>> folders = [];
+  Set<String> savedFolderIds = {};
 
   final String apiKey = '52a3569d728c4360aeec59f495f43626';
 
@@ -27,15 +26,13 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
   void initState() {
     super.initState();
     fetchRecipeDetails();
-    fetchFolders();
-    checkIfFavorited();
+    fetchFoldersAndSavedStatus();
   }
 
   Future<void> fetchRecipeDetails() async {
     try {
       final url = 'https://api.spoonacular.com/recipes/${widget.recipeId}/information?apiKey=$apiKey';
       final response = await http.get(Uri.parse(url));
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (!mounted) return;
@@ -59,7 +56,7 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
     }
   }
 
-  Future<void> fetchFolders() async {
+  Future<void> fetchFoldersAndSavedStatus() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -71,98 +68,144 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
         .get();
 
     final List<Map<String, dynamic>> fetchedFolders = [];
+    final Set<String> foundFolderIds = {};
 
     for (var doc in snapshot.docs) {
-      if (doc.id == 'uncategorized') {
-        fetchedFolders.insert(0, {
-          'id': doc.id,
-          'name': doc['name'],
-        });
-      } else {
-        fetchedFolders.add({
-          'id': doc.id,
-          'name': doc['name'],
-        });
+      fetchedFolders.add({
+        'id': doc.id,
+        'name': doc['name'],
+      });
+    }
+
+    // For each folder, check if recipe exists inside
+    for (var folder in fetchedFolders) {
+      final recipeDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('recipeFolders')
+          .doc(folder['id'])
+          .collection('recipes')
+          .doc(widget.recipeId.toString())
+          .get();
+
+      if (recipeDoc.exists) {
+        foundFolderIds.add(folder['id']);
       }
     }
 
     setState(() {
       folders = fetchedFolders;
+      savedFolderIds = foundFolderIds;
     });
   }
 
-  Future<void> checkIfFavorited() async {
+  Future<void> _showFolderSelectorDialog() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    try {
-      final foldersSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .collection('recipeFolders')
-          .get();
+    // Sort folders: Uncategorized on top
+    List<Map<String, dynamic>> sortedFolders = [];
+    final uncategorizedIndex = folders.indexWhere((f) => f['id'] == 'uncategorized');
+    if (uncategorizedIndex != -1) {
+      sortedFolders.add(folders[uncategorizedIndex]);
+    }
+    sortedFolders.addAll(folders.where((f) => f['id'] != 'uncategorized'));
 
-      for (var folder in foldersSnapshot.docs) {
-        final recipeDoc = await folder.reference
-            .collection('recipes')
-            .doc(widget.recipeId.toString())
-            .get();
+    // Ensure 'uncategorized' is ticked by default
+    final Set<String> tempSelectedFolders = Set<String>.from(savedFolderIds);
+    if (!tempSelectedFolders.contains('uncategorized')) {
+      tempSelectedFolders.add('uncategorized');
+    }
 
-        if (recipeDoc.exists) {
-          setState(() {
-            isFavorited = true;
-          });
-          return;
-        }
-      }
+    final result = await showDialog<Set<String>>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Select Folders to Save Recipe'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView(
+                  shrinkWrap: true,
+                  children: sortedFolders.map((folder) {
+                    final folderId = folder['id'];
+                    final folderName = folder['name'];
+                    return CheckboxListTile(
+                      title: Text(folderName),
+                        value: tempSelectedFolders.contains(folderId),
+                        onChanged: (bool? checked) {
+                          setState(() {
+                            if (checked == true) {
+                              tempSelectedFolders.add(folderId);
+                            } else {
+                              tempSelectedFolders.remove(folderId);
+                            }
+                          });
+                        },
+                        controlAffinity: ListTileControlAffinity.leading,
+                        dense: true,
+                    );
+                  }).toList(),
+                ),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context, null), child: Text('Cancel')),
+                ElevatedButton(onPressed: () => Navigator.pop(context, tempSelectedFolders), child: Text('Save')),
+              ],
+            );
+          },
+        );
+      },
+    );
 
-      // Not found in any folder
-      setState(() {
-        isFavorited = false;
-      });
-    } catch (e) {
-      print("Error checking favorite status: $e");
+    if (result != null) {
+      await _updateRecipeFolders(result);
     }
   }
 
-  Future<void> toggleFavorite() async {
+  Future<void> _updateRecipeFolders(Set<String> selectedFolders) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || recipe == null) return;
 
     final recipeId = widget.recipeId.toString();
-    final docRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('recipeFolders')
-        .doc(selectedFolderId)
-        .collection('recipes')
-        .doc(recipeId);
 
-    try {
-      if (isFavorited) {
-        await docRef.delete();
-        setState(() {
-          isFavorited = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Removed from ${selectedFolderName}')),
-        );
-      } else {
-        await docRef.set({
-          'id': recipe!['id'],
-          'title': recipe!['title'],
-          'image': recipe!['image'],
-        });
-        setState(() {
-          isFavorited = true;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Saved to $selectedFolderName')),
-        );
-      }
-    } catch (e) {
-      print("Favorite error: $e");
+    // Remove from folders that were unselected
+    for (var folderId in savedFolderIds.difference(selectedFolders)) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('recipeFolders')
+          .doc(folderId)
+          .collection('recipes')
+          .doc(recipeId)
+          .delete();
     }
+
+    // Add to newly selected folders
+    for (var folderId in selectedFolders.difference(savedFolderIds)) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('recipeFolders')
+          .doc(folderId)
+          .collection('recipes')
+          .doc(recipeId)
+          .set({
+        'id': recipe!['id'],
+        'title': recipe!['title'],
+        'image': recipe!['image'],
+      });
+    }
+
+    // Update local state
+    setState(() {
+      savedFolderIds = selectedFolders;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Saved to ${selectedFolders.length} folder(s)')),
+    );
   }
 
   @override
@@ -171,38 +214,17 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
       appBar: AppBar(
         title: Text(recipe?['title'] ?? 'Recipe Details'),
         backgroundColor: Colors.orange,
-        actions: [
-          if (!isLoading && recipe != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: DropdownButton<String>(
-                value: selectedFolderId,
-                onChanged: (value) {
-                  setState(() {
-                    selectedFolderId = value!;
-                    selectedFolderName = folders.firstWhere((f) => f['id'] == value)['name'];
-                  });
-                },
-                items: folders.map<DropdownMenuItem<String>>((folder) {
-                  return DropdownMenuItem<String>(
-                    value: folder['id'] as String,
-                    child: Text(folder['name'] as String),
-                  );
-                }).toList(),
-              ),
-            )
-        ],
       ),
       floatingActionButton: recipe == null
           ? null
           : FloatingActionButton(
-              onPressed: toggleFavorite,
+              onPressed: _showFolderSelectorDialog,
               backgroundColor: Colors.white,
               child: Icon(
                 Icons.favorite,
-                color: isFavorited ? Colors.red : Colors.grey[400],
+                color: savedFolderIds.isNotEmpty ? Colors.red : Colors.grey[400],
               ),
-              tooltip: isFavorited ? 'Remove from Folder' : 'Save to Folder',
+              tooltip: savedFolderIds.isNotEmpty ? 'Manage Saved Folders' : 'Save to Folders',
             ),
       body: isLoading
           ? Center(child: CircularProgressIndicator())
