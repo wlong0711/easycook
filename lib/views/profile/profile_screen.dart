@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import 'user_details_screen.dart';
 import 'favorite_recipes_screen.dart';
+import '../profile/shopping_list_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -141,7 +142,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
 
-                  // 📌 Add more options below if needed (history, settings, etc.)
+                  // 🛒 Shopping List
+                  Card(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: ListTile(
+                      leading: Icon(Icons.shopping_cart, color: Colors.green),
+                      title: Text("Shopping List"),
+                      trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ShoppingListScreen()),
+                        );
+                      },
+                    ),
+                  ),                  
                 ],
               ),
             ),

@@ -15,8 +15,6 @@ class RecipeDetailsScreen extends StatefulWidget {
 class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
   Map<String, dynamic>? recipe;
   bool isLoading = true;
-
-  // Folder list: each with id, name, and whether recipe is saved there
   List<Map<String, dynamic>> folders = [];
   Set<String> savedFolderIds = {};
 
@@ -71,13 +69,9 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
     final Set<String> foundFolderIds = {};
 
     for (var doc in snapshot.docs) {
-      fetchedFolders.add({
-        'id': doc.id,
-        'name': doc['name'],
-      });
+      fetchedFolders.add({'id': doc.id, 'name': doc['name']});
     }
 
-    // For each folder, check if recipe exists inside
     for (var folder in fetchedFolders) {
       final recipeDoc = await FirebaseFirestore.instance
           .collection('users')
@@ -103,7 +97,6 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Sort folders: Uncategorized on top
     List<Map<String, dynamic>> sortedFolders = [];
     final uncategorizedIndex = folders.indexWhere((f) => f['id'] == 'uncategorized');
     if (uncategorizedIndex != -1) {
@@ -111,7 +104,6 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
     }
     sortedFolders.addAll(folders.where((f) => f['id'] != 'uncategorized'));
 
-    // Ensure 'uncategorized' is ticked by default
     final Set<String> tempSelectedFolders = Set<String>.from(savedFolderIds);
     if (!tempSelectedFolders.contains('uncategorized')) {
       tempSelectedFolders.add('uncategorized');
@@ -133,18 +125,18 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
                     final folderName = folder['name'];
                     return CheckboxListTile(
                       title: Text(folderName),
-                        value: tempSelectedFolders.contains(folderId),
-                        onChanged: (bool? checked) {
-                          setState(() {
-                            if (checked == true) {
-                              tempSelectedFolders.add(folderId);
-                            } else {
-                              tempSelectedFolders.remove(folderId);
-                            }
-                          });
-                        },
-                        controlAffinity: ListTileControlAffinity.leading,
-                        dense: true,
+                      value: tempSelectedFolders.contains(folderId),
+                      onChanged: (bool? checked) {
+                        setState(() {
+                          if (checked == true) {
+                            tempSelectedFolders.add(folderId);
+                          } else {
+                            tempSelectedFolders.remove(folderId);
+                          }
+                        });
+                      },
+                      controlAffinity: ListTileControlAffinity.leading,
+                      dense: true,
                     );
                   }).toList(),
                 ),
@@ -170,7 +162,6 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
 
     final recipeId = widget.recipeId.toString();
 
-    // Remove from folders that were unselected
     for (var folderId in savedFolderIds.difference(selectedFolders)) {
       await FirebaseFirestore.instance
           .collection('users')
@@ -182,7 +173,6 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
           .delete();
     }
 
-    // Add to newly selected folders
     for (var folderId in selectedFolders.difference(savedFolderIds)) {
       await FirebaseFirestore.instance
           .collection('users')
@@ -198,7 +188,6 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
       });
     }
 
-    // Update local state
     setState(() {
       savedFolderIds = selectedFolders;
     });
@@ -206,6 +195,109 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Saved to ${selectedFolders.length} folder(s)')),
     );
+  }
+
+  Future<void> addMissingIngredientsToShoppingList() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || recipe == null) return;
+
+    final pantryDoc = await FirebaseFirestore.instance
+        .collection('pantries')
+        .doc(user.uid)
+        .get();
+
+    List pantryItems = pantryDoc.exists && pantryDoc.data()?['ingredients'] is List
+        ? List<String>.from(pantryDoc.data()!['ingredients'])
+        : [];
+
+    final List<dynamic> recipeIngredients = recipe?['extendedIngredients'] ?? [];
+    List<String> available = [];
+    List<String> missing = [];
+
+    for (var ingredient in recipeIngredients) {
+      final name = ingredient['original'].toString().toLowerCase().trim();
+      final keyword = name.split(" ").last;
+      if (pantryItems.any((item) => item.toLowerCase().contains(keyword))) {
+        available.add(name);
+      } else {
+        missing.add(name);
+      }
+    }
+
+    if (missing.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("All ingredients are already in your pantry.")),
+      );
+      return;
+    }
+
+    Set<String> selected = Set.from(missing); // All checked by default
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(builder: (context, setState) {
+          return AlertDialog(
+            title: Text("Add Missing Ingredients"),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("✅ Available in Pantry:", style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...available.map((e) => Padding(
+                        padding: EdgeInsets.only(left: 8, bottom: 4),
+                        child: Text("- $e", style: TextStyle(color: Colors.grey[700])),
+                      )),
+                  SizedBox(height: 12),
+                  Text("🛒 Missing Ingredients:", style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...missing.map((item) {
+                    return CheckboxListTile(
+                      title: Text(item),
+                      value: selected.contains(item),
+                      onChanged: (checked) {
+                        setState(() {
+                          if (checked == true) {
+                            selected.add(item);
+                          } else {
+                            selected.remove(item);
+                          }
+                        });
+                      },
+                      controlAffinity: ListTileControlAffinity.leading,
+                    );
+                  }).toList(),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancel")),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, selected),
+                child: Text("Add to Shopping List"),
+              ),
+            ],
+          );
+        });
+      },
+    ).then((selectedSet) async {
+      if (selectedSet == null || selectedSet.isEmpty) return;
+
+      final shoppingDoc = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('shoppingList')
+          .doc(widget.recipeId.toString());
+
+      await shoppingDoc.set({
+        'name': recipe!['title'],
+        'image': recipe!['image'],
+        'ingredients': selectedSet.map((item) => {'name': item, 'done': false}).toList(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("${selectedSet.length} item(s) added to shopping list.")),
+      );
+    });
   }
 
   @override
@@ -217,14 +309,28 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
       ),
       floatingActionButton: recipe == null
           ? null
-          : FloatingActionButton(
-              onPressed: _showFolderSelectorDialog,
-              backgroundColor: Colors.white,
-              child: Icon(
-                Icons.favorite,
-                color: savedFolderIds.isNotEmpty ? Colors.red : Colors.grey[400],
-              ),
-              tooltip: savedFolderIds.isNotEmpty ? 'Manage Saved Folders' : 'Save to Folders',
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FloatingActionButton(
+                  heroTag: "shopping",
+                  onPressed: addMissingIngredientsToShoppingList,
+                  backgroundColor: Colors.orange,
+                  child: Icon(Icons.shopping_cart),
+                  tooltip: "Add missing ingredients to Shopping List",
+                ),
+                const SizedBox(height: 12),
+                FloatingActionButton(
+                  heroTag: "favorite",
+                  onPressed: _showFolderSelectorDialog,
+                  backgroundColor: Colors.white,
+                  child: Icon(
+                    Icons.favorite,
+                    color: savedFolderIds.isNotEmpty ? Colors.red : Colors.grey[400],
+                  ),
+                  tooltip: savedFolderIds.isNotEmpty ? 'Manage Saved Folders' : 'Save to Folders',
+                ),
+              ],
             ),
       body: isLoading
           ? Center(child: CircularProgressIndicator())
