@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class RecipeDetailsScreen extends StatefulWidget {
   final int recipeId;
@@ -300,6 +301,89 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
     });
   }
 
+  Future<void> addToMealPlan() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || recipe == null) return;
+
+    DateTime selectedDate = DateTime.now();
+    String selectedMeal = 'breakfast';
+    List<String> mealTypes = ['breakfast', 'lunch', 'dinner'];
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text("Add to Meal Plan"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    title: Text("Select Date"),
+                    subtitle: Text("${selectedDate.toLocal()}".split(' ')[0]),
+                    trailing: Icon(Icons.calendar_today),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: DateTime.now().subtract(Duration(days: 365)),
+                        lastDate: DateTime.now().add(Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        setState(() => selectedDate = picked);
+                      }
+                    },
+                  ),
+                  SizedBox(height: 10),
+                  DropdownButton<String>(
+                    value: selectedMeal,
+                    onChanged: (value) => setState(() => selectedMeal = value!),
+                    items: mealTypes
+                        .map((type) => DropdownMenuItem(value: type, child: Text(type.capitalize())))
+                        .toList(),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context, false), child: Text("Cancel")),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text("Add"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result == true) {
+      final docRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('mealPlans')
+          .doc(DateFormat('yyyy-MM-dd').format(selectedDate));
+
+      final doc = await docRef.get();
+      Map<String, dynamic> data = doc.exists ? doc.data()! : {};
+
+      List existing = data[selectedMeal] ?? [];
+
+      existing.add({
+        'id': recipe!['id'],
+        'title': recipe!['title'],
+        'image': recipe!['image'],
+      });
+
+      await docRef.set({selectedMeal: existing}, SetOptions(merge: true));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Added to $selectedMeal on ${DateFormat('MMM d').format(selectedDate)}")),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -312,6 +396,14 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
           : Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                FloatingActionButton(
+                  heroTag: "mealplan",
+                  onPressed: addToMealPlan,
+                  backgroundColor: Colors.teal,
+                  child: Icon(Icons.calendar_month),
+                  tooltip: "Add to Meal Plan",
+                ),
+                const SizedBox(height: 12),
                 FloatingActionButton(
                   heroTag: "shopping",
                   onPressed: addMissingIngredientsToShoppingList,
@@ -391,4 +483,8 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
                 ),
     );
   }
+}
+
+extension CapitalizeExtension on String {
+  String capitalize() => "${this[0].toUpperCase()}${substring(1)}";
 }
