@@ -25,97 +25,101 @@ class _LoginScreenState extends State<LoginScreen> {
     final authViewModel = Provider.of<AuthViewModel>(context);
 
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // ✅ Logo at the top
-              Image.network(
-                logoUrl,
-                height: 120,
-                errorBuilder: (context, error, stackTrace) =>
-                    Icon(Icons.image_not_supported, size: 100),
-              ),
+      resizeToAvoidBottomInset: true,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(height: 60),
+                Image.network(
+                  logoUrl,
+                  height: 120,
+                  errorBuilder: (context, error, stackTrace) =>
+                      Icon(Icons.image_not_supported, size: 100),
+                ),
+                SizedBox(height: 20),
+                Text("Login", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                SizedBox(height: 20),
 
-              SizedBox(height: 20),
-              Text("Login", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-              SizedBox(height: 20),
+                // Email Field
+                TextFormField(
+                  controller: _emailController,
+                  decoration: InputDecoration(labelText: "Email"),
+                  validator: (value) => Validators.validateEmail(value ?? ""),
+                ),
 
-              // Email Field
-              TextFormField(
-                controller: _emailController,
-                decoration: InputDecoration(labelText: "Email"),
-                validator: (value) => Validators.validateEmail(value ?? ""),
-              ),
+                SizedBox(height: 16),
 
-              // Password Field
-              TextFormField(
-                controller: _passwordController,
-                decoration: InputDecoration(
-                  labelText: "Password",
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                // Password Field
+                TextFormField(
+                  controller: _passwordController,
+                  decoration: InputDecoration(
+                    labelText: "Password",
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
+                  ),
+                  obscureText: _obscurePassword,
+                  validator: (value) => Validators.validatePassword(value ?? ""),
+                ),
+
+                SizedBox(height: 10),
+
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
                     onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => ForgotPasswordScreen()));
                     },
+                    child: Text("Forgot Password?"),
                   ),
                 ),
-                obscureText: _obscurePassword,
-                validator: (value) => Validators.validatePassword(value ?? ""),
-              ),
 
-              SizedBox(height: 10),
+                SizedBox(height: 10),
 
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => ForgotPasswordScreen()));
-                  },
-                  child: Text("Forgot Password?"),
-                ),
-              ),
-
-              SizedBox(height: 10),
-
-              // Login Button
-              ElevatedButton(
-                onPressed: () async {
-                  if (_formKey.currentState!.validate()) {
-                    bool success = await authViewModel.signIn(
-                      _emailController.text.trim(),
-                      _passwordController.text.trim(),
-                    );
-
-                    if (success) {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => MainScreen()),
+                // Login Button
+                ElevatedButton(
+                  onPressed: () async {
+                    if (_formKey.currentState!.validate()) {
+                      bool success = await authViewModel.signIn(
+                        _emailController.text.trim(),
+                        _passwordController.text.trim(),
                       );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Login failed. Please check your credentials.")),
-                      );
+
+                      if (success) {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => MainScreen()),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Login failed. Please check your credentials.")),
+                        );
+                      }
                     }
-                  }
-                },
-                child: Text("Login"),
-              ),
+                  },
+                  child: Text("Login"),
+                ),
 
-              SizedBox(height: 10),
+                SizedBox(height: 10),
 
-              TextButton(
-                onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => SignUpScreen()));
-                },
-                child: Text("Don't have an account? Sign Up"),
-              ),
-            ],
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => SignUpScreen()));
+                  },
+                  child: Text("Don't have an account? Sign Up"),
+                ),
+              ],
+            ),
           ),
         ),
       ),
