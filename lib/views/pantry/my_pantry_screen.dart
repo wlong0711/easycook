@@ -88,7 +88,7 @@ class _MyPantryScreenState extends State<MyPantryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.orange[50],
       appBar: AppBar(
         title: const Text("My Pantry"),
         backgroundColor: Colors.orange,
@@ -166,7 +166,7 @@ class _MyPantryScreenState extends State<MyPantryScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Colors.grey[200],
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: const [
                       BoxShadow(

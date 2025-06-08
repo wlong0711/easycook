@@ -11,7 +11,12 @@ class CuisinesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Cuisines")),
+      backgroundColor: Colors.orange[50],
+      appBar: AppBar(
+        title: const Text("Cuisines"),
+        centerTitle: true,
+        backgroundColor: Colors.orange,      
+      ),
       body: ListView.builder(
         padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
         itemCount: cuisines.length,

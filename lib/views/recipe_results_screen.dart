@@ -77,7 +77,7 @@ class _RecipeResultsScreenState extends State<RecipeResultsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.orange[50],
       appBar: AppBar(
         title: const Text("Recipe Results"),
         backgroundColor: Colors.orange,
