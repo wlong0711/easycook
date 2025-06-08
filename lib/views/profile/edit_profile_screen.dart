@@ -110,21 +110,107 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     // ✅ Save Changes Button with Validation
                     ElevatedButton(
                       onPressed: () async {
-                        if (_formKey.currentState!.validate()) {  // ✅ Ensure validation
-                          await authViewModel.updateUserProfile(
-                            _nameController.text.trim(),
-                            _phoneController.text.trim(),
+                        if (_formKey.currentState!.validate()) {
+                          // Show custom loading dialog
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (_) => Dialog(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              backgroundColor: Colors.white,
+                              child: Padding(
+                                padding: const EdgeInsets.all(24.0),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    CircularProgressIndicator(color: Colors.orange),
+                                    SizedBox(width: 20),
+                                    Text("Saving...", style: TextStyle(fontSize: 16)),
+                                  ],
+                                ),
+                              ),
+                            ),
                           );
 
-                          if (_selectedImage != null) {
-                            await authViewModel.updateProfilePicture(_selectedImage!);
+                          try {
+                            await authViewModel.updateUserProfile(
+                              _nameController.text.trim(),
+                              _phoneController.text.trim(),
+                            );
+
+                            if (_selectedImage != null) {
+                              await authViewModel.updateProfilePicture(_selectedImage!, context);
+                            }
+
+                            Navigator.of(context).pop(); // Close loading dialog
+
+                            // Show success dialog
+                            showDialog(
+                              context: context,
+                              builder: (_) => Dialog(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                backgroundColor: Colors.white,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24.0),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.check_circle, color: Colors.green, size: 48),
+                                      SizedBox(height: 16),
+                                      Text("Success!", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                      SizedBox(height: 8),
+                                      Text("Profile updated successfully.", textAlign: TextAlign.center),
+                                      SizedBox(height: 24),
+                                      ElevatedButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop(); // Close dialog
+                                          Navigator.pop(context, "updated"); // Return to previous screen
+                                        },
+                                        child: Text("OK"),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.orange,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          } catch (e) {
+                            Navigator.of(context).pop(); // Close loading dialog if error occurs
+                            showDialog(
+                              context: context,
+                              builder: (_) => Dialog(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                backgroundColor: Colors.white,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(24.0),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.error_outline, color: Colors.red, size: 48),
+                                      SizedBox(height: 16),
+                                      Text("Error", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                      SizedBox(height: 8),
+                                      Text("Something went wrong. Please try again.", textAlign: TextAlign.center),
+                                      SizedBox(height: 24),
+                                      ElevatedButton(
+                                        onPressed: () => Navigator.of(context).pop(),
+                                        child: Text("OK"),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
                           }
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("Profile updated successfully!")),
-                          );
-
-                          Navigator.pop(context, "updated");  // Go back to User Details Screen
                         }
                       },
                       child: Text("Save Changes"),

@@ -93,16 +93,32 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   // ✅ Upload Profile Picture
-  Future<void> updateProfilePicture(File imageFile) async {
+  Future<void> updateProfilePicture(File imageFile, BuildContext context) async {
     if (_user != null) {
       String? imageUrl = await _authService.uploadProfilePicture(_user!.uid, imageFile);
       if (imageUrl != null) {
         await FirebaseFirestore.instance.collection('users').doc(_user!.uid).update({
-          "profilePic": imageUrl, // ✅ Save image URL in Firestore
+          "profilePic": imageUrl,
         });
 
         _userProfile?["profilePic"] = imageUrl;
         notifyListeners();
+
+        // ✅ Show confirmation snackbar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Profile picture updated successfully!"),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        // ❌ Upload failed
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to upload profile picture."),
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     }
   }

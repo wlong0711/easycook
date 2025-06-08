@@ -93,6 +93,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
               ElevatedButton(
                 onPressed: () async {
                   if (_formKey.currentState!.validate()) {
+                    // ✅ Show loading dialog
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => Dialog(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        backgroundColor: Colors.white,
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(color: Colors.orange),
+                              SizedBox(width: 20),
+                              Text("Signing up...", style: TextStyle(fontSize: 16)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+
+                    // ✅ Perform sign-up
                     bool success = await authViewModel.signUp(
                       _emailController.text.trim(),
                       _passwordController.text.trim(),
@@ -100,18 +122,84 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       _phoneController.text.trim(),
                     );
 
+                    // ✅ Close loading dialog
+                    Navigator.of(context).pop();
+
                     if (success) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Verification email sent. Please check your inbox.")),
+                      // ✅ Show success dialog
+                      showDialog(
+                        context: context,
+                        builder: (_) => Dialog(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          backgroundColor: Colors.white,
+                          child: Padding(
+                            padding: const EdgeInsets.all(24.0),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.mark_email_read_rounded, color: Colors.orange, size: 48),
+                                SizedBox(height: 16),
+                                Text("Verify Your Email", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                SizedBox(height: 8),
+                                Text(
+                                  "A verification email has been sent to your inbox. Please verify your email before logging in.",
+                                  textAlign: TextAlign.center,
+                                ),
+                                SizedBox(height: 24),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(); // Close dialog
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => LoginScreen()),
+                                    );
+                                  },
+                                  child: Text("OK"),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       );
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => LoginScreen()),
-                      );
-                    }
-                    else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Sign-up failed. Try again.")),
+                    } else {
+                      // ❌ Show failure dialog
+                      showDialog(
+                        context: context,
+                        builder: (_) => Dialog(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          backgroundColor: Colors.white,
+                          child: Padding(
+                            padding: const EdgeInsets.all(24.0),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.error_outline, color: Colors.red, size: 48),
+                                SizedBox(height: 16),
+                                Text("Sign-Up Failed", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                SizedBox(height: 8),
+                                Text(
+                                  "Something went wrong during sign-up. Please try again.",
+                                  textAlign: TextAlign.center,
+                                ),
+                                SizedBox(height: 24),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: Text("OK"),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       );
                     }
                   }

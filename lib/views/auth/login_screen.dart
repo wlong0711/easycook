@@ -90,10 +90,34 @@ class _LoginScreenState extends State<LoginScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     if (_formKey.currentState!.validate()) {
+                      // ✅ Show loading dialog
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (_) => Dialog(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          backgroundColor: Colors.white,
+                          child: Padding(
+                            padding: const EdgeInsets.all(24.0),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(color: Colors.orange),
+                                SizedBox(width: 20),
+                                Text("Logging in...", style: TextStyle(fontSize: 16)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+
+                      // ✅ Attempt login
                       bool success = await authViewModel.signIn(
                         _emailController.text.trim(),
                         _passwordController.text.trim(),
                       );
+
+                      Navigator.of(context).pop(); // Close loading dialog
 
                       if (success) {
                         Navigator.pushReplacement(
