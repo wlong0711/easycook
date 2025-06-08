@@ -1,3 +1,4 @@
+// import statements
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -26,7 +27,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
   }
 
   String get _formattedWeekRange {
-    final formatter = DateFormat('MMMM d, yyyy');
+    final formatter = DateFormat('MMMM d');
     return "${formatter.format(_startOfWeek)} - ${formatter.format(_startOfWeek.add(Duration(days: 6)))}";
   }
 
@@ -110,42 +111,31 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
   void _showAddOptions() {
     showModalBottomSheet(
       context: context,
-      builder: (_) => Wrap(
-        children: [
-          ListTile(
-            leading: Icon(Icons.home),
-            title: Text("Browse Home"),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (_) => HomeScreen()));
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.category),
-            title: Text("Browse by Category"),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (_) => CategoriesScreen()));
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.kitchen),
-            title: Text("Use My Pantry"),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (_) => MyPantryScreen()));
-            },
-          ),
-          ListTile(
-            leading: Icon(Icons.favorite),
-            title: Text("Favorite Recipes"),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(context, MaterialPageRoute(builder: (_) => FavoriteRecipesScreen()));
-            },
-          ),
-        ],
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildOption(Icons.home, "Browse Home", HomeScreen()),
+            _buildOption(Icons.category, "Browse by Category", CategoriesScreen()),
+            _buildOption(Icons.kitchen, "Use My Pantry", MyPantryScreen()),
+            _buildOption(Icons.favorite, "Favorite Recipes", FavoriteRecipesScreen()),
+          ],
+        ),
       ),
+    );
+  }
+
+  ListTile _buildOption(IconData icon, String title, Widget screen) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.orange),
+      title: Text(title),
+      onTap: () {
+        Navigator.pop(context);
+        Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+      },
     );
   }
 
@@ -154,6 +144,8 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
         ? DateFormat('EEEE').format(DateFormat('yyyy-MM-dd').parse(date))
         : 'Today';
 
+    final mealIcons = {'breakfast': '🍳', 'lunch': '🍱', 'dinner': '🌙'};
+
     return Card(
       margin: EdgeInsets.symmetric(vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -161,13 +153,13 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
       child: ExpansionTile(
         key: PageStorageKey(date),
         initiallyExpanded: true,
-        title: Text("$dayLabel - $date", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text("$dayLabel • $date", style: TextStyle(fontWeight: FontWeight.bold)),
         children: ['breakfast', 'lunch', 'dinner'].map((meal) {
           final recipes = meals[meal] ?? [];
           return ExpansionTile(
             key: PageStorageKey('$date-$meal'),
             initiallyExpanded: _expandedMeals[date]?.contains(meal) ?? false,
-            title: Text(meal[0].toUpperCase() + meal.substring(1)),
+            title: Text("${mealIcons[meal]} ${meal[0].toUpperCase()}${meal.substring(1)}"),
             onExpansionChanged: (expanded) => _toggleMealExpansion(date, meal),
             children: recipes.isEmpty
                 ? [ListTile(title: Text("No $meal planned."))]
@@ -206,9 +198,10 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
     final days = isWeekly ? List.generate(7, (i) => _formatDate(_startOfWeek.add(Duration(days: i)))) : [_formatDate(now)];
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.orange[50],
       appBar: AppBar(
         title: Text("Meal Planner"),
+        centerTitle: true,
         backgroundColor: Colors.orange,
         actions: [
           IconButton(
@@ -242,11 +235,21 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: Text(_formattedWeekRange,
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black54)),
             ),
           Expanded(
             child: _mealPlans.isEmpty
-                ? Center(child: Text("No meal plans found."))
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.calendar_today, size: 64, color: Colors.grey),
+                        SizedBox(height: 12),
+                        Text("No meal plans found.",
+                            style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                      ],
+                    ),
+                  )
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     itemCount: days.length,
@@ -264,7 +267,8 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
   Widget _buildTabButton(String label, bool selected, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: Duration(milliseconds: 250),
         padding: EdgeInsets.symmetric(horizontal: 22, vertical: 10),
         margin: EdgeInsets.symmetric(horizontal: 5),
         decoration: BoxDecoration(
