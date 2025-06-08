@@ -38,10 +38,25 @@ class _FolderRecipeListState extends State<FolderRecipeList> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.orange[50],
       appBar: AppBar(
-        title: Text(widget.folderName),
         backgroundColor: Colors.orange,
+        centerTitle: true,
+        title: Column(
+          children: [
+            Text(widget.folderName, style: TextStyle(fontWeight: FontWeight.bold)),
+            StreamBuilder<QuerySnapshot>(
+              stream: recipeRef.snapshots(),
+              builder: (context, snapshot) {
+                final count = snapshot.hasData ? snapshot.data!.docs.length : 0;
+                return Text(
+                  "$count recipe${count == 1 ? '' : 's'}",
+                  style: TextStyle(fontSize: 12, color: Colors.white70),
+                );
+              },
+            ),
+          ],
+        ),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: recipeRef.snapshots(),
@@ -64,7 +79,7 @@ class _FolderRecipeListState extends State<FolderRecipeList> {
           }
 
           return ListView.builder(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
             itemCount: recipes.length,
             itemBuilder: (context, index) {
               final doc = recipes[index];
@@ -94,24 +109,45 @@ class _FolderRecipeListState extends State<FolderRecipeList> {
                   );
                 },
                 onDismissed: (_) => _removeRecipe(recipeId),
-                child: Card(
+                child: Container(
                   margin: EdgeInsets.only(bottom: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 2,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
                   child: ListTile(
-                    contentPadding: EdgeInsets.all(12),
+                    contentPadding: EdgeInsets.all(14),
                     leading: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
                       child: data['image'] != null
-                          ? Image.network(data['image'], width: 60, height: 60, fit: BoxFit.cover)
-                          : Icon(Icons.image, size: 50),
+                          ? Image.network(
+                              data['image'],
+                              width: 60,
+                              height: 60,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Icon(Icons.broken_image, size: 40),
+                            )
+                          : Container(
+                              width: 60,
+                              height: 60,
+                              color: Colors.grey[200],
+                              child: Icon(Icons.image_not_supported, size: 40),
+                            ),
                     ),
                     title: Text(
                       data['title'] ?? 'No Title',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    trailing: Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey),
                     onTap: () {
                       Navigator.push(
                         context,

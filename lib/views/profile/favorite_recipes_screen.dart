@@ -145,17 +145,17 @@ class _FavoriteRecipesScreenState extends State<FavoriteRecipesScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.orange[50],
       appBar: AppBar(
-        title: Text("Recipe Collections"),
+        title: Text("My Recipe Collections"),
         centerTitle: true,
         backgroundColor: Colors.orange,
         actions: [
           IconButton(
-            icon: Icon(Icons.add),
+            icon: Icon(Icons.create_new_folder_rounded),
+            tooltip: "Create New Folder",
             onPressed: _createFolder,
-            tooltip: "New Folder",
-          )
+          ),
         ],
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -164,13 +164,12 @@ class _FavoriteRecipesScreenState extends State<FavoriteRecipesScreen> {
           if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
 
           final allFolders = snapshot.data!.docs;
-
           final List<QueryDocumentSnapshot> folders = [];
+
           final uncategorized = allFolders.where((doc) => doc.id == "uncategorized").toList();
           final others = allFolders.where((doc) => doc.id != "uncategorized").toList();
-
-          folders.addAll(uncategorized); // Always at top
-          folders.addAll(others);        // Then the rest
+          folders.addAll(uncategorized);
+          folders.addAll(others);
 
           if (folders.isEmpty) {
             return Center(
@@ -179,7 +178,7 @@ class _FavoriteRecipesScreenState extends State<FavoriteRecipesScreen> {
                 children: [
                   Icon(Icons.folder_open, size: 60, color: Colors.grey),
                   SizedBox(height: 12),
-                  Text("No recipe folders created yet.",
+                  Text("No folders yet.",
                       style: TextStyle(color: Colors.grey[600], fontSize: 16)),
                 ],
               ),
@@ -187,33 +186,51 @@ class _FavoriteRecipesScreenState extends State<FavoriteRecipesScreen> {
           }
 
           return ListView.builder(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             itemCount: folders.length,
             itemBuilder: (context, index) {
               final doc = folders[index];
               final data = doc.data() as Map<String, dynamic>;
-
               final isUncategorized = doc.id == "uncategorized";
 
-              return Card(
-                color: isUncategorized ? Colors.orange[50] : null,
-                margin: const EdgeInsets.only(bottom: 14),
-                child: ListTile(
-                  leading: Icon(
-                    isUncategorized ? Icons.folder_special : Icons.folder,
-                    color: isUncategorized ? Colors.deepOrange : Colors.orange,
-                    size: 32,
+              return InkWell(
+                onTap: () => _openFolder(doc.id, data['name']),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                  margin: EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      )
+                    ],
                   ),
-                  title: Text(
-                    data['name'] ?? 'Untitled Folder',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: isUncategorized ? Colors.deepOrange : null,
-                    ),
-                  ),
-                  trailing: isUncategorized
-                      ? null
-                      : PopupMenuButton<String>(
+                  child: Row(
+                    children: [
+                      Icon(
+                        isUncategorized ? Icons.folder_special_rounded : Icons.folder_rounded,
+                        color: isUncategorized ? Colors.deepOrange : Colors.orange,
+                        size: 34,
+                      ),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          data['name'] ?? 'Untitled Folder',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: isUncategorized ? Colors.deepOrange : Colors.black87,
+                          ),
+                        ),
+                      ),
+                      if (!isUncategorized)
+                        PopupMenuButton<String>(
+                          icon: Icon(Icons.more_vert, size: 20),
                           onSelected: (val) {
                             if (val == 'rename') _renameFolder(doc.id, data['name']);
                             if (val == 'delete') _deleteFolder(doc.id);
@@ -223,7 +240,8 @@ class _FavoriteRecipesScreenState extends State<FavoriteRecipesScreen> {
                             PopupMenuItem(value: 'delete', child: Text("Delete")),
                           ],
                         ),
-                  onTap: () => _openFolder(doc.id, data['name']),
+                    ],
+                  ),
                 ),
               );
             },

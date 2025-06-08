@@ -34,20 +34,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final userProfile = authViewModel.userProfile;
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.orange[50],
       appBar: AppBar(
         title: Text("My Profile"),
         centerTitle: true,
         backgroundColor: Colors.orange,
+        elevation: 2,
       ),
       body: userProfile == null
           ? Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 📸 Profile Header
+                  // 👤 Profile Card
                   GestureDetector(
                     onTap: () {
                       Navigator.push(
@@ -56,31 +57,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       );
                     },
                     child: Container(
-                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
+                        gradient: LinearGradient(
+                          colors: [Colors.orange[300]!, Colors.orange[100]!],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black12,
                             blurRadius: 6,
-                            offset: Offset(0, 2),
+                            offset: Offset(0, 3),
                           ),
                         ],
                       ),
+                      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
                       child: Row(
                         children: [
                           CircleAvatar(
                             radius: 40,
+                            backgroundColor: Colors.white,
                             backgroundImage: (userProfile["profilePic"] != null &&
                                     userProfile["profilePic"] != "")
                                 ? NetworkImage(userProfile["profilePic"])
                                 : null,
                             child: (userProfile["profilePic"] == null ||
                                     userProfile["profilePic"] == "")
-                                ? Icon(Icons.person, size: 40, color: Colors.white)
+                                ? Icon(Icons.person, size: 40, color: Colors.orange[700])
                                 : null,
-                            backgroundColor: Colors.orange[200],
                           ),
                           SizedBox(width: 16),
                           Expanded(
@@ -92,27 +97,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
+                                    color: Colors.orange[900],
                                   ),
                                 ),
-                                SizedBox(height: 4),
+                                SizedBox(height: 6),
                                 Text(
                                   authViewModel.user?.email ?? "No Email",
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: Colors.grey[600],
+                                    color: Colors.orange[800],
                                   ),
                                 ),
                                 SizedBox(height: 6),
                                 Text(
                                   "Tap to view and edit profile",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.orange,
-                                  ),
+                                  style: TextStyle(fontSize: 12, color: Colors.white),
                                 ),
                               ],
                             ),
-                          )
+                          ),
                         ],
                       ),
                     ),
@@ -120,17 +123,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   SizedBox(height: 30),
 
-                  // 📚 Saved Recipes
                   Text(
                     "Your Activity",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  SizedBox(height: 10),
+                  SizedBox(height: 12),
 
+                  // 🧾 Saved Recipes Card
                   Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 4,
                     child: ListTile(
-                      leading: Icon(Icons.bookmark, color: Colors.orange),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      leading: Container(
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.bookmark, color: Colors.orange),
+                      ),
                       title: Text("My Recipe Collection"),
                       trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
                       onTap: () {
@@ -142,11 +154,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
 
-                  // 🛒 Shopping List
+                  // 🛒 Shopping List Card
                   Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 4,
                     child: ListTile(
-                      leading: Icon(Icons.shopping_cart, color: Colors.green),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      leading: Container(
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.shopping_cart, color: Colors.green),
+                      ),
                       title: Text("Shopping List"),
                       trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
                       onTap: () {
@@ -156,7 +177,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         );
                       },
                     ),
-                  ),                  
+                  ),
+
+                  SizedBox(height: 30),
                 ],
               ),
             ),
