@@ -3,6 +3,10 @@ import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../recipe_details_screen.dart';
+import '../home/home_screen.dart'; 
+import '../categories/categories_screen.dart';
+import '../pantry/my_pantry_screen.dart';
+import '../profile/favorite_recipes_screen.dart';
 
 class MealPlannerScreen extends StatefulWidget {
   const MealPlannerScreen({super.key});
@@ -13,7 +17,6 @@ class MealPlannerScreen extends StatefulWidget {
 
 class _MealPlannerScreenState extends State<MealPlannerScreen> {
   bool isWeekly = true;
-
   Map<String, Map<String, List<Map<String, dynamic>>>> _mealPlans = {};
   Map<String, Set<String>> _expandedMeals = {};
 
@@ -22,11 +25,9 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
     return now.subtract(Duration(days: now.weekday - 1));
   }
 
-  DateTime get _endOfWeek => _startOfWeek.add(const Duration(days: 6));
-
   String get _formattedWeekRange {
     final formatter = DateFormat('MMMM d, yyyy');
-    return "${formatter.format(_startOfWeek)} - ${formatter.format(_endOfWeek)}";
+    return "${formatter.format(_startOfWeek)} - ${formatter.format(_startOfWeek.add(Duration(days: 6)))}";
   }
 
   String _formatDate(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
@@ -43,34 +44,27 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
         .get();
 
     if (!doc.exists || doc.data() == null) return {};
-
     final data = doc.data()!;
     Map<String, List<Map<String, dynamic>>> mealData = {};
-    ['breakfast', 'lunch', 'dinner'].forEach((meal) {
-      if (data[meal] is List) {
-        mealData[meal] = List<Map<String, dynamic>>.from(data[meal]);
-      } else {
-        mealData[meal] = [];
-      }
-    });
-
+    for (var meal in ['breakfast', 'lunch', 'dinner']) {
+      mealData[meal] = data[meal] is List
+          ? List<Map<String, dynamic>>.from(data[meal])
+          : [];
+    }
     return mealData;
   }
 
   Future<void> _loadMealPlans() async {
     Map<String, Map<String, List<Map<String, dynamic>>>> newPlans = {};
-
     if (isWeekly) {
       for (int i = 0; i < 7; i++) {
-        final date = _startOfWeek.add(Duration(days: i));
-        final dateStr = _formatDate(date);
+        final dateStr = _formatDate(_startOfWeek.add(Duration(days: i)));
         newPlans[dateStr] = await _fetchMealPlanForDate(dateStr);
       }
     } else {
       final todayStr = _formatDate(DateTime.now());
       newPlans[todayStr] = await _fetchMealPlanForDate(todayStr);
     }
-
     setState(() {
       _mealPlans = newPlans;
       _expandedMeals = {};
@@ -80,12 +74,6 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
   @override
   void initState() {
     super.initState();
-    _loadMealPlans();
-  }
-
-  @override
-  void didUpdateWidget(covariant MealPlannerScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
     _loadMealPlans();
   }
 
@@ -100,7 +88,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
     });
   }
 
-  Future<void> _deleteRecipeFromMealPlan(String date, String meal, String recipeId) async {
+  Future<void> _removeMeal(String date, String meal, int recipeId) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -111,88 +99,90 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
         .doc(date);
 
     final doc = await docRef.get();
-    if (!doc.exists || doc.data() == null) return;
+    if (!doc.exists) return;
 
-    Map<String, dynamic> data = doc.data()!;
-    List existing = data[meal] ?? [];
-
-    existing.removeWhere((r) => r['id'].toString() == recipeId);
-
+    List existing = doc.data()?[meal] ?? [];
+    existing.removeWhere((item) => item['id'] == recipeId);
     await docRef.set({meal: existing}, SetOptions(merge: true));
-
     await _loadMealPlans();
+  }
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Recipe removed from $meal on $date")),
+  void _showAddOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => Wrap(
+        children: [
+          ListTile(
+            leading: Icon(Icons.home),
+            title: Text("Browse Home"),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => HomeScreen()));
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.category),
+            title: Text("Browse by Category"),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => CategoriesScreen()));
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.kitchen),
+            title: Text("Use My Pantry"),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => MyPantryScreen()));
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.favorite),
+            title: Text("Favorite Recipes"),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => FavoriteRecipesScreen()));
+            },
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildMealsForDate(String date, Map<String, List<Map<String, dynamic>>> meals) {
-    final dateObj = DateFormat('yyyy-MM-dd').parse(date);
-    final dayLabel = isWeekly ? DateFormat('EEEE').format(dateObj) : 'Today';
+    final dayLabel = isWeekly
+        ? DateFormat('EEEE').format(DateFormat('yyyy-MM-dd').parse(date))
+        : 'Today';
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: EdgeInsets.symmetric(vertical: 8),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       elevation: 3,
       child: ExpansionTile(
         key: PageStorageKey(date),
         initiallyExpanded: true,
-        title: Text(
-          "$dayLabel - $date",
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
+        title: Text("$dayLabel - $date", style: TextStyle(fontWeight: FontWeight.bold)),
         children: ['breakfast', 'lunch', 'dinner'].map((meal) {
-          final isExpanded = _expandedMeals[date]?.contains(meal) ?? false;
-          final mealRecipes = meals[meal] ?? [];
-
+          final recipes = meals[meal] ?? [];
           return ExpansionTile(
             key: PageStorageKey('$date-$meal'),
-            title: Text(
-              meal[0].toUpperCase() + meal.substring(1),
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            initiallyExpanded: isExpanded,
+            initiallyExpanded: _expandedMeals[date]?.contains(meal) ?? false,
+            title: Text(meal[0].toUpperCase() + meal.substring(1)),
             onExpansionChanged: (expanded) => _toggleMealExpansion(date, meal),
-            children: mealRecipes.isEmpty
-                ? [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Text(
-                        "No $meal planned.",
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                    )
-                  ]
-                : mealRecipes.map((recipe) {
+            children: recipes.isEmpty
+                ? [ListTile(title: Text("No $meal planned."))]
+                : recipes.map((recipe) {
                     return ListTile(
                       leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(6),
                         child: recipe['image'] != null
                             ? Image.network(recipe['image'], width: 50, height: 50, fit: BoxFit.cover)
-                            : const Icon(Icons.image_not_supported),
+                            : Icon(Icons.image),
                       ),
                       title: Text(recipe['title'] ?? 'No Title'),
                       trailing: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.redAccent),
-                        onPressed: () async {
-                          final confirmed = await showDialog<bool>(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Delete Recipe'),
-                              content: Text('Are you sure you want to remove this recipe from $meal on $dayLabel?'),
-                              actions: [
-                                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                                TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
-                              ],
-                            ),
-                          );
-
-                          if (confirmed == true) {
-                            await _deleteRecipeFromMealPlan(date, meal, recipe['id'].toString());
-                          }
-                        },
+                        icon: Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => _removeMeal(date, meal, recipe['id']),
                       ),
                       onTap: () {
                         Navigator.push(
@@ -212,17 +202,25 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final days = isWeekly ? List.generate(7, (i) => _formatDate(_startOfWeek.add(Duration(days: i)))) : [_formatDate(now)];
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text("Meal Planner"),
-        centerTitle: true,
+        title: Text("Meal Planner"),
         backgroundColor: Colors.orange,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.add),
+            onPressed: _showAddOptions,
+            tooltip: "Add Recipe from...",
+          )
+        ],
       ),
       body: Column(
         children: [
           const SizedBox(height: 10),
-
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -240,42 +238,21 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
               }),
             ],
           ),
-
-          const SizedBox(height: 10),
-
           if (isWeekly)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
-                ),
-                child: Text(
-                  _formattedWeekRange,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                ),
-              ),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text(_formattedWeekRange,
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
             ),
-
-          const SizedBox(height: 10),
-
-          const Divider(),
-
           Expanded(
             child: _mealPlans.isEmpty
                 ? Center(child: Text("No meal plans found."))
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: isWeekly ? 7 : 1,
+                    itemCount: days.length,
                     itemBuilder: (context, index) {
-                      final date = isWeekly
-                          ? _formatDate(_startOfWeek.add(Duration(days: index)))
-                          : _formatDate(DateTime.now());
-                      final mealsForDate = _mealPlans[date] ?? {};
-                      return _buildMealsForDate(date, mealsForDate);
+                      final date = days[index];
+                      return _buildMealsForDate(date, _mealPlans[date] ?? {});
                     },
                   ),
           ),
@@ -288,14 +265,12 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-        margin: const EdgeInsets.symmetric(horizontal: 5),
+        padding: EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+        margin: EdgeInsets.symmetric(horizontal: 5),
         decoration: BoxDecoration(
           color: selected ? Colors.teal : Colors.white,
           borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            if (selected) BoxShadow(color: Colors.teal.shade100, blurRadius: 5),
-          ],
+          boxShadow: selected ? [BoxShadow(color: Colors.teal.shade100, blurRadius: 5)] : [],
         ),
         child: Text(
           label,
