@@ -84,11 +84,65 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                   Center(
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        await authViewModel.signOut();
+                        showDialog(
+                          context: context,
+                          builder: (_) => Dialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            backgroundColor: Colors.white,
+                            child: Padding(
+                              padding: const EdgeInsets.all(24.0),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.logout, size: 48, color: Colors.red),
+                                  SizedBox(height: 16),
+                                  Text("Confirm Logout", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    "Are you sure you want to log out from your account?",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(fontSize: 14),
+                                  ),
+                                  SizedBox(height: 24),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: [
+                                      // Cancel button
+                                      OutlinedButton(
+                                        onPressed: () => Navigator.of(context).pop(),
+                                        child: Text("Cancel"),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: Colors.grey[700],
+                                          side: BorderSide(color: Colors.grey),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                        ),
+                                      ),
 
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (context) => LoginScreen()),
+                                      // Confirm button
+                                      ElevatedButton(
+                                        onPressed: () async {
+                                          Navigator.of(context).pop(); // Close dialog first
+                                          await authViewModel.signOut();
+                                          Navigator.pushReplacement(
+                                            context,
+                                            MaterialPageRoute(builder: (_) => LoginScreen()),
+                                          );
+                                        },
+                                        child: Text("Log Out"),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Colors.red,
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         );
                       },
                       icon: Icon(Icons.logout, color: Colors.white),
