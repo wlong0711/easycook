@@ -384,6 +384,22 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
     }
   }
 
+  String getCuisines() {
+    final cuisines = recipe?['cuisines'];
+    if (cuisines is List && cuisines.isNotEmpty) {
+      return cuisines.join(', ');
+    }
+    return "Not specified";
+  }
+
+  String getDiets() {
+    final diets = recipe?['diets'];
+    if (diets is List && diets.isNotEmpty) {
+      return diets.join(', ');
+    }
+    return "Not specified";
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -447,6 +463,11 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
                         recipe?['title'] ?? 'No Title Available',
                         style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                       ),
+                      SizedBox(height: 8),
+                      Text("Cuisine: ${getCuisines()}",
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey[700])),
+                      Text("Diet: ${getDiets()}",
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey[700])),
                       SizedBox(height: 16),
                       Text("Description", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       SizedBox(height: 8),

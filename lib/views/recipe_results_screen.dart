@@ -35,13 +35,13 @@ class _RecipeResultsScreenState extends State<RecipeResultsScreen> {
 
     if (widget.ingredients != null && widget.ingredients!.isNotEmpty) {
       url =
-          'https://api.spoonacular.com/recipes/complexSearch?includeIngredients=${widget.ingredients}&addRecipeNutrition=true&number=10&apiKey=$apiKey';
+          'https://api.spoonacular.com/recipes/complexSearch?includeIngredients=${widget.ingredients}&addRecipeNutrition=true&addRecipeInformation=true&number=10&apiKey=$apiKey';
     } else if (widget.filterType != null && widget.filterValue != null) {
       url =
-          'https://api.spoonacular.com/recipes/complexSearch?${widget.filterType}=${widget.filterValue}&addRecipeNutrition=true&number=10&apiKey=$apiKey';
+          'https://api.spoonacular.com/recipes/complexSearch?${widget.filterType}=${widget.filterValue}&addRecipeNutrition=true&addRecipeInformation=true&number=10&apiKey=$apiKey';
     } else {
       url =
-          'https://api.spoonacular.com/recipes/random?number=10&addRecipeNutrition=true&apiKey=$apiKey';
+          'https://api.spoonacular.com/recipes/random?number=10&addRecipeNutrition=true&addRecipeInformation=true&apiKey=$apiKey';
     }
 
     try {
@@ -74,12 +74,18 @@ class _RecipeResultsScreenState extends State<RecipeResultsScreen> {
     return "– kcal";
   }
 
+  String getCookingTime(Map<String, dynamic> recipe) {
+    final minutes = recipe['readyInMinutes'];
+    return minutes != null ? "$minutes min" : "– min";
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.orange[50],
       appBar: AppBar(
         title: const Text("Recipe Results"),
+        centerTitle: true,
         backgroundColor: Colors.orange,
       ),
       body: isLoading
@@ -102,7 +108,7 @@ class _RecipeResultsScreenState extends State<RecipeResultsScreen> {
                     crossAxisCount: 2,
                     mainAxisSpacing: 16,
                     crossAxisSpacing: 16,
-                    childAspectRatio: 3 / 4,
+                    childAspectRatio: 2.5 / 4, // ✅ more vertical space
                   ),
                   itemCount: recipes.length,
                   itemBuilder: (context, index) {
@@ -134,8 +140,7 @@ class _RecipeResultsScreenState extends State<RecipeResultsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             ClipRRect(
-                              borderRadius:
-                                  const BorderRadius.vertical(top: Radius.circular(16)),
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                               child: Image.network(
                                 imageUrl.isNotEmpty
                                     ? imageUrl
@@ -149,27 +154,38 @@ class _RecipeResultsScreenState extends State<RecipeResultsScreen> {
                                 ),
                               ),
                             ),
-                            Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    recipe['title'] ?? 'No Title',
-                                    style: const TextStyle(
-                                        fontSize: 15, fontWeight: FontWeight.w600),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    getCalories(recipe),
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Colors.grey[700],
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      recipe['title'] ?? 'No Title',
+                                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
-                                ],
+                                    Row(
+                                      children: [
+                                        Icon(Icons.local_fire_department, size: 16, color: Colors.orange),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          getCalories(recipe),
+                                          style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Icon(Icons.timer, size: 16, color: Colors.orange),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          getCookingTime(recipe),
+                                          style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],

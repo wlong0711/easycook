@@ -59,6 +59,27 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  String getCalories(Map<String, dynamic> recipe) {
+    try {
+      final nutrients = recipe['nutrition']?['nutrients'];
+      if (nutrients is List) {
+        final cal = nutrients.firstWhere(
+          (n) => n['name'] == 'Calories',
+          orElse: () => null,
+        );
+        return cal != null ? "${cal['amount'].round()} kcal" : "– kcal";
+      }
+    } catch (e) {
+      print("Calorie parse error: $e");
+    }
+    return "– kcal";
+  }
+
+  String getReadyTime(Map<String, dynamic> recipe) {
+    final time = recipe['readyInMinutes'];
+    return time != null ? "$time mins" : "– mins";
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -69,14 +90,14 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ✅ Logo + Title
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Image.network(
                     logoUrl,
                     height: 60,
-                    errorBuilder: (_, __, ___) => Icon(Icons.image_not_supported, size: 60),
+                    errorBuilder: (_, __, ___) =>
+                        Icon(Icons.image_not_supported, size: 60),
                   ),
                   const SizedBox(width: 10),
                   const Text(
@@ -86,8 +107,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 20),
-
-              // ✅ Search Bar
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -118,10 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 20),
-
-              // ✅ Recipe Grid
               Expanded(
                 child: isLoading
                     ? Center(child: CircularProgressIndicator())
@@ -147,23 +163,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             itemBuilder: (context, index) {
                               final recipe = recipes[index];
-                              final imageUrl = (recipe['image'] ?? '').replaceAll(RegExp(r'\.+\$'), '');
-
-                              String getCalories(Map<String, dynamic> recipe) {
-                                try {
-                                  final nutrients = recipe['nutrition']?['nutrients'];
-                                  if (nutrients is List) {
-                                    final cal = nutrients.firstWhere(
-                                      (n) => n['name'] == 'Calories',
-                                      orElse: () => null,
-                                    );
-                                    return cal != null ? "${cal['amount'].round()} kcal" : "– kcal";
-                                  }
-                                } catch (e) {
-                                  print("Calorie parse error: $e");
-                                }
-                                return "– kcal";
-                              }
+                              final imageUrl =
+                                  (recipe['image'] ?? '').replaceAll(RegExp(r'\.+\$'), '');
 
                               return GestureDetector(
                                 onTap: () {
@@ -197,8 +198,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                               : 'https://via.placeholder.com/150',
                                           height: 120,
                                           fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) =>
-                                              Image.asset('assets/images/placeholder.png', height: 120, fit: BoxFit.cover),
+                                          errorBuilder: (_, __, ___) => Image.asset(
+                                            'assets/images/placeholder.png',
+                                            height: 120,
+                                            fit: BoxFit.cover,
+                                          ),
                                         ),
                                       ),
                                       Padding(
@@ -208,14 +212,26 @@ class _HomeScreenState extends State<HomeScreen> {
                                           children: [
                                             Text(
                                               recipe['title'] ?? '',
-                                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                              ),
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                             const SizedBox(height: 4),
-                                            Text(
-                                              getCalories(recipe),
-                                              style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  "🔥 ${getCalories(recipe)}",
+                                                  style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  "⏱ ${getReadyTime(recipe)}",
+                                                  style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                                                ),
+                                              ],
                                             ),
                                           ],
                                         ),
