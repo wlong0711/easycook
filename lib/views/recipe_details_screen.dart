@@ -403,6 +403,7 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.orange[50],
       appBar: AppBar(
         title: Text(recipe?['title'] ?? 'Recipe Details'),
         backgroundColor: Colors.orange,
@@ -449,56 +450,166 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Image.network(
-                        (recipe?['image'] ?? 'https://via.placeholder.com/300')
-                            .replaceAll(RegExp(r'\.+\$'), ''),
-                        errorBuilder: (context, error, stackTrace) =>
-                            Image.asset('assets/images/placeholder.png'),
-                        height: 200,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
+                      Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.network(
+                              (recipe?['image'] ?? 'https://via.placeholder.com/300')
+                                  .replaceAll(RegExp(r'\.+\$'), ''),
+                              height: 220,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Image.asset('assets/images/placeholder.png'),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [Colors.transparent, Colors.black54],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              child: Text(
+                                recipe?['title'] ?? 'No Title Available',
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  shadows: [Shadow(blurRadius: 2, color: Colors.black)],
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: 16),
-                      Text(
-                        recipe?['title'] ?? 'No Title Available',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      const SizedBox(height: 12),
+
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          Chip(
+                            label: Text(getCuisines()),
+                            avatar: const Icon(Icons.restaurant_menu, size: 18, color: Colors.orange),
+                            backgroundColor: Colors.orange.shade50,
+                            labelStyle: const TextStyle(color: Colors.orange),
+                          ),
+                          Chip(
+                            label: Text(getDiets()),
+                            avatar: const Icon(Icons.eco, size: 18, color: Colors.green),
+                            backgroundColor: Colors.green.shade50,
+                            labelStyle: const TextStyle(color: Colors.green),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: 8),
-                      Text("Cuisine: ${getCuisines()}",
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey[700])),
-                      Text("Diet: ${getDiets()}",
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey[700])),
-                      SizedBox(height: 16),
-                      Text("Description", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 20),
+
+                      // Description Section
+                      Row(
+                        children: const [
+                          Icon(Icons.description, color: Colors.deepOrange),
+                          SizedBox(width: 8),
+                          Text("Description", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
                       Text(
                         (recipe?['summary'] ?? 'No description available.')
                             .replaceAll(RegExp(r'<[^>]*>'), ''),
+                        style: const TextStyle(height: 1.5),
                       ),
-                      SizedBox(height: 16),
-                      Text("Ingredients", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 8),
-                      ...?recipe?['extendedIngredients']?.map<Widget>((ingredient) {
-                        return Text("- ${ingredient['original']}");
-                      }).toList(),
-                      SizedBox(height: 16),
-                      Text("Instructions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 24),
+
+                      // Ingredients Section
+                      Row(
+                        children: const [
+                          Icon(Icons.kitchen, color: Colors.teal),
+                          SizedBox(width: 8),
+                          Text("Ingredients", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ...List<Widget>.from(
+                        (recipe?['extendedIngredients'] ?? []).map<Widget>((ingredient) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 6.0),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text("• ", style: TextStyle(fontSize: 16)),
+                                Expanded(
+                                  child: Text(
+                                    ingredient['original'] ?? '',
+                                    style: const TextStyle(fontSize: 15),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Instructions Section
+                      Row(
+                        children: const [
+                          Icon(Icons.list_alt, color: Colors.indigo),
+                          SizedBox(width: 8),
+                          Text("Instructions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+
                       if (recipe?['analyzedInstructions'] != null &&
-                          recipe!['analyzedInstructions'].isNotEmpty) ...[
+                          recipe!['analyzedInstructions'].isNotEmpty &&
+                          recipe!['analyzedInstructions'][0]['steps'] != null)
                         ...List.generate(
                           recipe!['analyzedInstructions'][0]['steps'].length,
                           (index) {
                             final step = recipe!['analyzedInstructions'][0]['steps'][index];
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4.0),
-                              child: Text('${step['number']}. ${step['step']}'),
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.indigo.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: Colors.indigo,
+                                    radius: 14,
+                                    child: Text(
+                                      '${step['number']}',
+                                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      step['step'],
+                                      style: const TextStyle(fontSize: 15, height: 1.4),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             );
                           },
                         )
-                      ] else ...[
-                        Text("No step-by-step instructions available."),
-                      ],
+                      else
+                        const Text("No step-by-step instructions available."),
                     ],
                   ),
                 ),
