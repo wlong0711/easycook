@@ -11,38 +11,75 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 0;  // ✅ HomeScreen is the default tab
+  int _selectedIndex = 0;
 
   final List<Widget> _pages = [
-    HomeScreen(),         // 🏠 Home Page
-    CategoriesScreen(),   // 🔲 Categories
-    MyPantryScreen(),     // 🏪 My Pantry
-    MealPlannerScreen(),  // 📅 Meal Planner
-    ProfileScreen(),      // 👤 Profile
+    HomeScreen(),
+    CategoriesScreen(),
+    MyPantryScreen(),
+    MealPlannerScreen(),
+    ProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_selectedIndex],  // Show selected screen
-
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;  // Change selected tab
-          });
+      body: AnimatedSwitcher(
+        duration: Duration(milliseconds: 300),
+        switchInCurve: Curves.easeInOut,
+        child: _pages[_selectedIndex],
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          return FadeTransition(opacity: animation, child: child);
         },
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.orange,
-        unselectedItemColor: Colors.black54,
-        items: [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: "Categories"),
-          BottomNavigationBarItem(icon: Icon(Icons.kitchen), label: "My Pantry"),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: "Meal Planner"),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
-        ],
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 8,
+              offset: Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+          child: BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            onTap: (index) => setState(() => _selectedIndex = index),
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            selectedItemColor: Colors.orange,
+            unselectedItemColor: Colors.grey[600],
+            selectedLabelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            unselectedLabelStyle: TextStyle(fontSize: 11),
+            items: [
+              BottomNavigationBarItem(
+                icon: Icon(_selectedIndex == 0 ? Icons.home_rounded : Icons.home_outlined),
+                label: "Home",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(_selectedIndex == 1 ? Icons.grid_view_rounded : Icons.grid_view_outlined),
+                label: "Categories",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(_selectedIndex == 2 ? Icons.kitchen_rounded : Icons.kitchen_outlined),
+                label: "My Pantry",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(_selectedIndex == 3 ? Icons.calendar_month_rounded : Icons.calendar_today_outlined),
+                label: "Meal Planner",
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(_selectedIndex == 4 ? Icons.person_rounded : Icons.person_outline),
+                label: "Profile",
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -15,24 +15,24 @@ class AuthViewModel extends ChangeNotifier {
   // Sign Up
   Future<bool> signUp(String email, String password, String fullName, String phoneNumber) async {
     try {
-    UserCredential userCredential = await FirebaseAuth.instance
-        .createUserWithEmailAndPassword(email: email, password: password);
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
 
-    // ✅ Send email verification
-    await userCredential.user?.sendEmailVerification();
+      await userCredential.user?.sendEmailVerification();
 
-    // ✅ Save additional profile info to Firestore
-    await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
-      'fullName': fullName,
-      'phoneNumber': phoneNumber,
-      'email': email,
-    });
+      await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+        'fullName': fullName,
+        'phoneNumber': phoneNumber,
+        'email': email,
+      });
 
-    return true;
-  } catch (e) {
-    print("SignUp Error: $e");
-    return false;
-  }
+      _user = userCredential.user;   // ✅ Add this
+      notifyListeners();             // ✅ Optional
+      return true;
+    } catch (e) {
+      print("SignUp Error: $e");
+      return false;
+    }
   }
 
   // ✅ Ensure signIn method exists
@@ -42,13 +42,16 @@ class AuthViewModel extends ChangeNotifier {
           .signInWithEmailAndPassword(email: email, password: password);
 
       if (!userCredential.user!.emailVerified) {
-        await FirebaseAuth.instance.signOut();  // Sign out the unverified user
+        await FirebaseAuth.instance.signOut();
         throw FirebaseAuthException(
           code: 'email-not-verified',
           message: 'Please verify your email before logging in.',
         );
       }
 
+      _user = userCredential.user; // ✅ FIX: set the current user
+      await fetchUserProfile();    // ✅ Optionally load the profile
+      notifyListeners();           // ✅ Notify any listeners to rebuild
       return true;
     } catch (e) {
       print("Login Error: $e");
@@ -90,13 +93,32 @@ class AuthViewModel extends ChangeNotifier {
   }
 
   // ✅ Upload Profile Picture
-  Future<void> updateProfilePicture(File imageFile) async {
+  Future<void> updateProfilePicture(File imageFile, BuildContext context) async {
     if (_user != null) {
       String? imageUrl = await _authService.uploadProfilePicture(_user!.uid, imageFile);
       if (imageUrl != null) {
-        await _authService.updateUserProfile(_user!.uid, _userProfile?["fullName"] ?? "", _userProfile?["phoneNumber"] ?? "");
+        await FirebaseFirestore.instance.collection('users').doc(_user!.uid).update({
+          "profilePic": imageUrl,
+        });
+
         _userProfile?["profilePic"] = imageUrl;
         notifyListeners();
+
+        // ✅ Show confirmation snackbar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Profile picture updated successfully!"),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        // ❌ Upload failed
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Failed to upload profile picture."),
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     }
   }
