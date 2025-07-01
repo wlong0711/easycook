@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../recipe_results_screen.dart';
+import '../categories/m_recipe_result_screen.dart';  // Import the new RecipeResultScreen
+import '../recipe_results_screen.dart';  // Keep the old RecipeResultsScreen import for non-Malay cuisines
 
 class CuisinesScreen extends StatelessWidget {
   const CuisinesScreen({super.key});
@@ -15,7 +16,7 @@ class CuisinesScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text("Cuisines"),
         centerTitle: true,
-        backgroundColor: Colors.orange,      
+        backgroundColor: Colors.orange,
       ),
       body: ListView.builder(
         padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
@@ -26,15 +27,27 @@ class CuisinesScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 8.0),
             child: InkWell(
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => RecipeResultsScreen(
-                      filterType: 'cuisine',
-                      filterValue: label.toLowerCase(),
+                // Check if the selected cuisine is "Malay"
+                if (label == "Malay") {
+                  // Navigate to the local Firestore-based RecipeResultScreen for Malay cuisine
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const m_RecipeResultScreen(),  // Navigate to the Firestore-based screen
                     ),
-                  ),
-                );
+                  );
+                } else {
+                  // For other cuisines, continue using the API-based RecipeResultsScreen
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => RecipeResultsScreen(
+                        filterType: 'cuisine',
+                        filterValue: label.toLowerCase(),
+                      ),
+                    ),
+                  );
+                }
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
