@@ -69,9 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
         return cal != null ? "${cal['amount'].round()} kcal" : "– kcal";
       }
-    } catch (e) {
-      print("Calorie parse error: $e");
-    }
+    } catch (_) {}
     return "– kcal";
   }
 
@@ -138,110 +136,114 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               const SizedBox(height: 20),
+              // ✅ Swipe down to refresh
               Expanded(
-                child: isLoading
-                    ? Center(child: CircularProgressIndicator())
-                    : recipes.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.search_off, size: 48, color: Colors.grey),
-                                const SizedBox(height: 10),
-                                Text("No recipes found. Try a different search.",
-                                    style: TextStyle(color: Colors.grey[600])),
-                              ],
-                            ),
-                          )
-                        : GridView.builder(
-                            itemCount: recipes.length,
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 14,
-                              mainAxisSpacing: 14,
-                              childAspectRatio: 3 / 4,
-                            ),
-                            itemBuilder: (context, index) {
-                              final recipe = recipes[index];
-                              final imageUrl =
-                                  (recipe['image'] ?? '').replaceAll(RegExp(r'\.+\$'), '');
+                child: RefreshIndicator(
+                  onRefresh: fetchRandomRecipes, // Trigger fetch when user swipes down
+                  child: isLoading
+                      ? Center(child: CircularProgressIndicator())
+                      : recipes.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.search_off, size: 48, color: Colors.grey),
+                                  const SizedBox(height: 10),
+                                  Text("No recipes found. Try a different search.",
+                                      style: TextStyle(color: Colors.grey[600])),
+                                ],
+                              ),
+                            )
+                          : GridView.builder(
+                              itemCount: recipes.length,
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                crossAxisSpacing: 14,
+                                mainAxisSpacing: 14,
+                                childAspectRatio: 3 / 4,
+                              ),
+                              itemBuilder: (context, index) {
+                                final recipe = recipes[index];
+                                final imageUrl =
+                                    (recipe['image'] ?? '').replaceAll(RegExp(r'\.+\$'), '');
 
-                              return GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => RecipeDetailsScreen(recipeId: recipe['id']),
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(16),
-                                    color: Colors.white,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black12,
-                                        blurRadius: 6,
-                                        offset: Offset(0, 2),
+                                return GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => RecipeDetailsScreen(recipeId: recipe['id']),
                                       ),
-                                    ],
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: [
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                                        child: Image.network(
-                                          imageUrl.isNotEmpty
-                                              ? imageUrl
-                                              : 'https://via.placeholder.com/150',
-                                          height: 120,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (_, __, ___) => Image.asset(
-                                            'assets/images/placeholder.png',
+                                    );
+                                  },
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(16),
+                                      color: Colors.white,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black12,
+                                          blurRadius: 6,
+                                          offset: Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                                          child: Image.network(
+                                            imageUrl.isNotEmpty
+                                                ? imageUrl
+                                                : 'https://via.placeholder.com/150',
                                             height: 120,
                                             fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => Image.asset(
+                                              'assets/images/placeholder.png',
+                                              height: 120,
+                                              fit: BoxFit.cover,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.all(10),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              recipe['title'] ?? '',
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 14,
+                                        Padding(
+                                          padding: const EdgeInsets.all(10),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                recipe['title'] ?? '',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14,
+                                                ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Row(
-                                              children: [
-                                                Text(
-                                                  "🔥 ${getCalories(recipe)}",
-                                                  style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                                                ),
-                                                const SizedBox(width: 6),
-                                                Text(
-                                                  "⏱ ${getReadyTime(recipe)}",
-                                                  style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  Text(
+                                                    "🔥 ${getCalories(recipe)}",
+                                                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    "⏱ ${getReadyTime(recipe)}",
+                                                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
-                          ),
+                                );
+                              },
+                            ),
+                ),
               ),
             ],
           ),
