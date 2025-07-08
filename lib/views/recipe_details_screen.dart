@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../viewmodels/recipe_viewmodel.dart';
-import '../models/recipe.dart';
 
 class RecipeDetailsScreen extends StatefulWidget {
   final int recipeId;
