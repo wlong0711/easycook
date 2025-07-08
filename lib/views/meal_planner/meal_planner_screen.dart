@@ -1,13 +1,12 @@
-// import statements
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../recipe_details_screen.dart';
 import '../home/home_screen.dart'; 
 import '../categories/categories_screen.dart';
 import '../pantry/my_pantry_screen.dart';
 import '../profile/favorite_recipes_screen.dart';
+import '../../viewmodels/meal_planner_viewmodel.dart';
 
 class MealPlannerScreen extends StatefulWidget {
   const MealPlannerScreen({super.key});
@@ -17,95 +16,13 @@ class MealPlannerScreen extends StatefulWidget {
 }
 
 class _MealPlannerScreenState extends State<MealPlannerScreen> {
-  bool isWeekly = true;
-  Map<String, Map<String, List<Map<String, dynamic>>>> _mealPlans = {};
-  Map<String, Set<String>> _expandedMeals = {};
-
-  DateTime get _startOfWeek {
-    final now = DateTime.now();
-    return now.subtract(Duration(days: now.weekday - 1));
-  }
-
-  String get _formattedWeekRange {
-    final formatter = DateFormat('MMMM d');
-    return "${formatter.format(_startOfWeek)} - ${formatter.format(_startOfWeek.add(Duration(days: 6)))}";
-  }
-
-  String _formatDate(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
-
-  Future<Map<String, List<Map<String, dynamic>>>> _fetchMealPlanForDate(String date) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return {};
-
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('mealPlans')
-        .doc(date)
-        .get();
-
-    if (!doc.exists || doc.data() == null) return {};
-    final data = doc.data()!;
-    Map<String, List<Map<String, dynamic>>> mealData = {};
-    for (var meal in ['breakfast', 'lunch', 'dinner']) {
-      mealData[meal] = data[meal] is List
-          ? List<Map<String, dynamic>>.from(data[meal])
-          : [];
-    }
-    return mealData;
-  }
-
-  Future<void> _loadMealPlans() async {
-    Map<String, Map<String, List<Map<String, dynamic>>>> newPlans = {};
-    if (isWeekly) {
-      for (int i = 0; i < 7; i++) {
-        final dateStr = _formatDate(_startOfWeek.add(Duration(days: i)));
-        newPlans[dateStr] = await _fetchMealPlanForDate(dateStr);
-      }
-    } else {
-      final todayStr = _formatDate(DateTime.now());
-      newPlans[todayStr] = await _fetchMealPlanForDate(todayStr);
-    }
-    setState(() {
-      _mealPlans = newPlans;
-      _expandedMeals = {};
-    });
-  }
-
   @override
   void initState() {
     super.initState();
-    _loadMealPlans();
-  }
-
-  void _toggleMealExpansion(String date, String meal) {
-    setState(() {
-      _expandedMeals[date] ??= {};
-      if (_expandedMeals[date]!.contains(meal)) {
-        _expandedMeals[date]!.remove(meal);
-      } else {
-        _expandedMeals[date]!.add(meal);
-      }
+    // Load meal plans when screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<MealPlannerViewModel>(context, listen: false).loadMealPlans();
     });
-  }
-
-  Future<void> _removeMeal(String date, String meal, int recipeId) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final docRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('mealPlans')
-        .doc(date);
-
-    final doc = await docRef.get();
-    if (!doc.exists) return;
-
-    List existing = doc.data()?[meal] ?? [];
-    existing.removeWhere((item) => item['id'] == recipeId);
-    await docRef.set({meal: existing}, SetOptions(merge: true));
-    await _loadMealPlans();
   }
 
   void _showAddOptions() {
@@ -139,12 +56,10 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
     );
   }
 
-  Widget _buildMealsForDate(String date, Map<String, List<Map<String, dynamic>>> meals) {
-    final dayLabel = isWeekly
+  Widget _buildMealsForDate(String date, Map<String, List<Map<String, dynamic>>> meals, MealPlannerViewModel viewModel) {
+    final dayLabel = viewModel.isWeekly
         ? DateFormat('EEEE').format(DateFormat('yyyy-MM-dd').parse(date))
         : 'Today';
-
-    final mealIcons = {'breakfast': '🍳', 'lunch': '🍱', 'dinner': '🌙'};
 
     return Card(
       margin: EdgeInsets.symmetric(vertical: 8),
@@ -158,9 +73,9 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
           final recipes = meals[meal] ?? [];
           return ExpansionTile(
             key: PageStorageKey('$date-$meal'),
-            initiallyExpanded: _expandedMeals[date]?.contains(meal) ?? false,
-            title: Text("${mealIcons[meal]} ${meal[0].toUpperCase()}${meal.substring(1)}"),
-            onExpansionChanged: (expanded) => _toggleMealExpansion(date, meal),
+            initiallyExpanded: viewModel.expandedMeals[date]?.contains(meal) ?? false,
+            title: Text("${viewModel.mealIcons[meal]} ${meal[0].toUpperCase()}${meal.substring(1)}"),
+            onExpansionChanged: (expanded) => viewModel.toggleMealExpansion(date, meal),
             children: recipes.isEmpty
                 ? [ListTile(title: Text("No $meal planned."))]
                 : recipes.map((recipe) {
@@ -174,7 +89,7 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
                       title: Text(recipe['title'] ?? 'No Title'),
                       trailing: IconButton(
                         icon: Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _removeMeal(date, meal, recipe['id']),
+                        onPressed: () => viewModel.removeMeal(date, meal, recipe['id']),
                       ),
                       onTap: () {
                         Navigator.push(
@@ -194,73 +109,72 @@ class _MealPlannerScreenState extends State<MealPlannerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final days = isWeekly ? List.generate(7, (i) => _formatDate(_startOfWeek.add(Duration(days: i)))) : [_formatDate(now)];
+    return Consumer<MealPlannerViewModel>(
+      builder: (context, mealPlannerViewModel, child) {
+        final days = mealPlannerViewModel.getDays();
 
-    return Scaffold(
-      backgroundColor: Colors.orange[50],
-      appBar: AppBar(
-        title: Text("Meal Planner"),
-        centerTitle: true,
-        backgroundColor: Colors.orange,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.add),
-            onPressed: _showAddOptions,
-            tooltip: "Add Recipe from...",
-          )
-        ],
-      ),
-      body: Column(
-        children: [
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildTabButton("Today", !isWeekly, () {
-                setState(() {
-                  isWeekly = false;
-                  _loadMealPlans();
-                });
-              }),
-              _buildTabButton("This Week", isWeekly, () {
-                setState(() {
-                  isWeekly = true;
-                  _loadMealPlans();
-                });
-              }),
+        return Scaffold(
+          backgroundColor: Colors.orange[50],
+          appBar: AppBar(
+            title: Text("Meal Planner"),
+            centerTitle: true,
+            backgroundColor: Colors.orange,
+            actions: [
+              IconButton(
+                icon: Icon(Icons.add),
+                onPressed: _showAddOptions,
+                tooltip: "Add Recipe from...",
+              )
             ],
           ),
-          if (isWeekly)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Text(_formattedWeekRange,
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black54)),
-            ),
-          Expanded(
-            child: _mealPlans.isEmpty
-                ? Center(
-                    child: Column(
+          body: mealPlannerViewModel.isLoading
+              ? Center(child: CircularProgressIndicator())
+              : Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.calendar_today, size: 64, color: Colors.grey),
-                        SizedBox(height: 12),
-                        Text("No meal plans found.",
-                            style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                        _buildTabButton("Today", !mealPlannerViewModel.isWeekly, () {
+                          mealPlannerViewModel.toggleView();
+                        }),
+                        _buildTabButton("This Week", mealPlannerViewModel.isWeekly, () {
+                          mealPlannerViewModel.toggleView();
+                        }),
                       ],
                     ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: days.length,
-                    itemBuilder: (context, index) {
-                      final date = days[index];
-                      return _buildMealsForDate(date, _mealPlans[date] ?? {});
-                    },
-                  ),
-          ),
-        ],
-      ),
+                    if (mealPlannerViewModel.isWeekly)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Text(mealPlannerViewModel.formattedWeekRange,
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black54)),
+                      ),
+                    Expanded(
+                      child: mealPlannerViewModel.mealPlans.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.calendar_today, size: 64, color: Colors.grey),
+                                  SizedBox(height: 12),
+                                  Text("No meal plans found.",
+                                      style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              itemCount: days.length,
+                              itemBuilder: (context, index) {
+                                final date = days[index];
+                                return _buildMealsForDate(date, mealPlannerViewModel.mealPlans[date] ?? {}, mealPlannerViewModel);
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+        );
+      },
     );
   }
 

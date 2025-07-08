@@ -4,6 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'views/auth/login_screen.dart';
 import 'views/main_screen.dart'; // Your bottom-nav main page
 import 'viewmodels/auth_viewmodel.dart';
+import 'viewmodels/recipe_viewmodel.dart';
+import 'viewmodels/pantry_viewmodel.dart';
+import 'viewmodels/favorite_recipes_viewmodel.dart';
+import 'viewmodels/meal_planner_viewmodel.dart';
+import 'viewmodels/shopping_list_viewmodel.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
@@ -14,6 +19,11 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthViewModel()),
+        ChangeNotifierProvider(create: (_) => RecipeViewModel()),
+        ChangeNotifierProvider(create: (_) => PantryViewModel()),
+        ChangeNotifierProvider(create: (_) => FavoriteRecipesViewModel()),
+        ChangeNotifierProvider(create: (_) => MealPlannerViewModel()),
+        ChangeNotifierProvider(create: (_) => ShoppingListViewModel()),
       ],
       child: const MyApp(),
     ),
