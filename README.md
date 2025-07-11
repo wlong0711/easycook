@@ -97,9 +97,3 @@ A: Some features may require an internet connection, such as recipe search.
 A: Use the "Forgot Password" option on the login screen.
 
 ---
-
-## Support
-
-If you encounter any issues or have suggestions, please open an [issue](https://github.com/yourusername/easycook/issues) or contact the maintainer.
-
----
