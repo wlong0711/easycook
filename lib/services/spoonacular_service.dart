@@ -33,4 +33,17 @@ class SpoonacularService {
       throw Exception('Failed to search recipes');
     }
   }
+
+  // ✅ Get Recipe Details by ID
+  Future<Map<String, dynamic>> getRecipeDetails(int recipeId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/recipes/$recipeId/information?apiKey=$apiKey'),
+    );
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Failed to load recipe details');
+    }
+  }
 }

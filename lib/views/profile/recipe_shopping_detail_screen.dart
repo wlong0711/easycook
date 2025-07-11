@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import '../../viewmodels/shopping_list_viewmodel.dart';
+import '../../models/shopping_list.dart';
 
 class RecipeShoppingDetailScreen extends StatefulWidget {
   final String recipeId;
@@ -19,42 +20,44 @@ class RecipeShoppingDetailScreen extends StatefulWidget {
 }
 
 class _RecipeShoppingDetailScreenState extends State<RecipeShoppingDetailScreen> {
-  late List<Map<String, dynamic>> _ingredients;
+  late List<ShoppingListItem> _ingredients;
 
   @override
   void initState() {
     super.initState();
-    _ingredients = List<Map<String, dynamic>>.from(widget.ingredients);
+    _ingredients = widget.ingredients.map((e) => ShoppingListItem.fromJson(e)).toList();
   }
 
-  Future<void> _toggleCheck(int index, bool? value) async {
+  void _toggleCheck(int index, bool? value) {
+    final viewModel = Provider.of<ShoppingListViewModel>(context, listen: false);
+    viewModel.toggleItem(widget.recipeId, index, value ?? false);
     setState(() {
-      _ingredients[index]['done'] = value ?? false;
+      _ingredients[index] = _ingredients[index].copyWith(done: value ?? false);
     });
-
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('shoppingList')
-        .doc(widget.recipeId)
-        .update({'ingredients': _ingredients});
   }
 
-  Future<void> _deleteRecipeEntry() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(user.uid)
-        .collection('shoppingList')
-        .doc(widget.recipeId)
-        .delete();
-
-    if (mounted) Navigator.pop(context);
+  void _deleteRecipeEntry() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text("Remove Recipe"),
+        content: Text("Delete all ingredients for this recipe from your shopping list?"),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text("Cancel")),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text("Delete"),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      Provider.of<ShoppingListViewModel>(context, listen: false).removeRecipe(widget.recipeId);
+      if (mounted) Navigator.pop(context);
+    }
   }
 
   @override
@@ -68,27 +71,7 @@ class _RecipeShoppingDetailScreenState extends State<RecipeShoppingDetailScreen>
           IconButton(
             icon: Icon(Icons.delete_outline),
             tooltip: "Remove Recipe",
-            onPressed: () async {
-              final confirmed = await showDialog<bool>(
-                context: context,
-                builder: (_) => AlertDialog(
-                  title: Text("Remove Recipe"),
-                  content: Text("Delete all ingredients for this recipe from your shopping list?"),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: Text("Cancel")),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      child: Text("Delete"),
-                    ),
-                  ],
-                ),
-              );
-
-              if (confirmed == true) await _deleteRecipeEntry();
-            },
+            onPressed: _deleteRecipeEntry,
           )
         ],
       ),
@@ -109,8 +92,8 @@ class _RecipeShoppingDetailScreenState extends State<RecipeShoppingDetailScreen>
               itemCount: _ingredients.length,
               itemBuilder: (context, index) {
                 final item = _ingredients[index];
-                final name = item['name'] ?? '';
-                final done = item['done'] ?? false;
+                final name = item.name;
+                final done = item.done;
 
                 return Card(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),

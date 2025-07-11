@@ -1,7 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../profile/folder_recipe_list.dart';
+import '../../viewmodels/favorite_recipes_viewmodel.dart';
 
 class FavoriteRecipesScreen extends StatefulWidget {
   const FavoriteRecipesScreen({super.key});
@@ -11,32 +11,13 @@ class FavoriteRecipesScreen extends StatefulWidget {
 }
 
 class _FavoriteRecipesScreenState extends State<FavoriteRecipesScreen> {
-  final user = FirebaseAuth.instance.currentUser;
-  late CollectionReference folderRef;
-
   @override
   void initState() {
     super.initState();
-
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid != null) {
-      folderRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .collection('recipeFolders');
-
-      _ensureUncategorizedFolderExists();
-    }
-  }
-
-  Future<void> _ensureUncategorizedFolderExists() async {
-    final doc = await folderRef.doc("uncategorized").get();
-    if (!doc.exists) {
-      await folderRef.doc("uncategorized").set({
-        'name': 'Uncategorized',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    }
+    // Initialize the ViewModel when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<FavoriteRecipesViewModel>(context, listen: false).initialize();
+    });
   }
 
   Future<void> _createFolder() async {
@@ -56,10 +37,8 @@ class _FavoriteRecipesScreenState extends State<FavoriteRecipesScreen> {
             onPressed: () async {
               final name = _folderNameController.text.trim();
               if (name.isNotEmpty) {
-                await folderRef.add({
-                  'name': name,
-                  'createdAt': FieldValue.serverTimestamp(),
-                });
+                await Provider.of<FavoriteRecipesViewModel>(context, listen: false)
+                    .createFolder(name);
               }
               Navigator.pop(ctx);
             },
@@ -91,7 +70,8 @@ class _FavoriteRecipesScreenState extends State<FavoriteRecipesScreen> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: Text("Cancel")),
           TextButton(
             onPressed: () async {
-              await folderRef.doc(folderId).update({'name': controller.text});
+              await Provider.of<FavoriteRecipesViewModel>(context, listen: false)
+                  .renameFolder(folderId, controller.text);
               Navigator.pop(ctx);
             },
             child: Text("Save"),
@@ -122,12 +102,8 @@ class _FavoriteRecipesScreenState extends State<FavoriteRecipesScreen> {
     );
 
     if (confirmed == true) {
-      final folder = folderRef.doc(folderId);
-      final recipes = await folder.collection('recipes').get();
-      for (var doc in recipes.docs) {
-        await doc.reference.delete();
-      }
-      await folder.delete();
+      await Provider.of<FavoriteRecipesViewModel>(context, listen: false)
+          .deleteFolder(folderId);
     }
   }
 
@@ -140,114 +116,98 @@ class _FavoriteRecipesScreenState extends State<FavoriteRecipesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (user == null) {
-      return Scaffold(body: Center(child: Text("Not logged in")));
-    }
-
-    return Scaffold(
-      backgroundColor: Colors.orange[50],
-      appBar: AppBar(
-        title: Text("My Recipe Collections"),
-        centerTitle: true,
-        backgroundColor: Colors.orange,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.create_new_folder_rounded),
-            tooltip: "Create New Folder",
-            onPressed: _createFolder,
-          ),
-        ],
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: folderRef.orderBy('createdAt', descending: true).snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
-
-          final allFolders = snapshot.data!.docs;
-          final List<QueryDocumentSnapshot> folders = [];
-
-          final uncategorized = allFolders.where((doc) => doc.id == "uncategorized").toList();
-          final others = allFolders.where((doc) => doc.id != "uncategorized").toList();
-          folders.addAll(uncategorized);
-          folders.addAll(others);
-
-          if (folders.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.folder_open, size: 60, color: Colors.grey),
-                  SizedBox(height: 12),
-                  Text("No folders yet.",
-                      style: TextStyle(color: Colors.grey[600], fontSize: 16)),
-                ],
+    return Consumer<FavoriteRecipesViewModel>(
+      builder: (context, favoriteRecipesViewModel, child) {
+        return Scaffold(
+          backgroundColor: Colors.orange[50],
+          appBar: AppBar(
+            title: Text("My Recipe Collections"),
+            centerTitle: true,
+            backgroundColor: Colors.orange,
+            actions: [
+              IconButton(
+                icon: Icon(Icons.create_new_folder_rounded),
+                tooltip: "Create New Folder",
+                onPressed: _createFolder,
               ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: folders.length,
-            itemBuilder: (context, index) {
-              final doc = folders[index];
-              final data = doc.data() as Map<String, dynamic>;
-              final isUncategorized = doc.id == "uncategorized";
-
-              return InkWell(
-                onTap: () => _openFolder(doc.id, data['name']),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                  margin: EdgeInsets.only(bottom: 14),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      )
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        isUncategorized ? Icons.folder_special_rounded : Icons.folder_rounded,
-                        color: isUncategorized ? Colors.deepOrange : Colors.orange,
-                        size: 34,
+            ],
+          ),
+          body: favoriteRecipesViewModel.isLoading
+              ? Center(child: CircularProgressIndicator())
+              : favoriteRecipesViewModel.folders.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.folder_open, size: 60, color: Colors.grey),
+                          SizedBox(height: 12),
+                          Text("No folders yet.",
+                              style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+                        ],
                       ),
-                      SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          data['name'] ?? 'Untitled Folder',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: isUncategorized ? Colors.deepOrange : Colors.black87,
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: favoriteRecipesViewModel.folders.length,
+                      itemBuilder: (context, index) {
+                        final folder = favoriteRecipesViewModel.folders[index];
+                        final isUncategorized = folder.isUncategorized;
+
+                        return InkWell(
+                          onTap: () => _openFolder(folder.id, folder.name),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                            margin: EdgeInsets.only(bottom: 14),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black12,
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2),
+                                )
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isUncategorized ? Icons.folder_special_rounded : Icons.folder_rounded,
+                                  color: isUncategorized ? Colors.deepOrange : Colors.orange,
+                                  size: 34,
+                                ),
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: Text(
+                                    folder.name,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: isUncategorized ? Colors.deepOrange : Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                                if (!isUncategorized)
+                                  PopupMenuButton<String>(
+                                    icon: Icon(Icons.more_vert, size: 20),
+                                    onSelected: (val) {
+                                      if (val == 'rename') _renameFolder(folder.id, folder.name);
+                                      if (val == 'delete') _deleteFolder(folder.id);
+                                    },
+                                    itemBuilder: (ctx) => [
+                                      PopupMenuItem(value: 'rename', child: Text("Rename")),
+                                      PopupMenuItem(value: 'delete', child: Text("Delete")),
+                                    ],
+                                  ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ),
-                      if (!isUncategorized)
-                        PopupMenuButton<String>(
-                          icon: Icon(Icons.more_vert, size: 20),
-                          onSelected: (val) {
-                            if (val == 'rename') _renameFolder(doc.id, data['name']);
-                            if (val == 'delete') _deleteFolder(doc.id);
-                          },
-                          itemBuilder: (ctx) => [
-                            PopupMenuItem(value: 'rename', child: Text("Rename")),
-                            PopupMenuItem(value: 'delete', child: Text("Delete")),
-                          ],
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
+                        );
+                      },
+                    ),
+        );
+      },
     );
   }
 }
