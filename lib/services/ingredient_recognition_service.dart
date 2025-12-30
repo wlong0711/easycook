@@ -1,11 +1,18 @@
 import 'dart:io';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class IngredientRecognitionService {
-  static const _apiKey = 'AIzaSyBNsLX1tOB5gCLb6kvgSdW4oRi5KXh2H2I';
+  static String get _apiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
 
   static Future<List<String>> recognizeIngredientsFromImage(File imageFile) async {
-    final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: _apiKey);
+    
+    if (_apiKey.isEmpty) {
+      print("Error: API Key not found in .env file");
+      return [];
+    }
+    
+    final model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: _apiKey);
     final bytes = await imageFile.readAsBytes();
 
     final content = [
