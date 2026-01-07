@@ -380,9 +380,64 @@ class _RecipeDetailsScreenState extends State<RecipeDetailsScreen> {
                           ),
                           const SizedBox(height: 8),
 
-                          if (recipe.instructions != null && recipe.instructions!.isNotEmpty)
+                          // if (recipe.instructions != null && recipe.instructions!.isNotEmpty)
+                          //   Text(
+                          //     recipe.instructions!,
+                          //     style: const TextStyle(fontSize: 15, height: 1.4),
+                          //   )
+                          // else
+                          //   const Text("No step-by-step instructions available."),
+
+                          if (recipe.analyzedInstructions != null && recipe.analyzedInstructions!.isNotEmpty) ...[
+                            for (var part in recipe.analyzedInstructions!) ...[
+                              // Sometimes recipes have parts (e.g., "Main Dish", "Sauce")
+                              if (part['name'] != null && part['name'].toString().isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 10, bottom: 5),
+                                  child: Text(
+                                    part['name'],
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.indigo),
+                                  ),
+                                ),
+                              
+                              // Loop through the steps inside this part
+                              for (var step in part['steps'])
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 12.0),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // Step Number Circle
+                                      Container(
+                                        width: 24,
+                                        height: 24,
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Text(
+                                          "${step['number']}",
+                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      // Step Text
+                                      Expanded(
+                                        child: Text(
+                                          step['step'],
+                                          style: const TextStyle(fontSize: 15, height: 1.4),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ]
+                          ] 
+                          // FALLBACK: If analyzedInstructions is missing, try the old text (cleaned of HTML tags)
+                          else if (recipe.instructions != null && recipe.instructions!.isNotEmpty)
                             Text(
-                              recipe.instructions!,
+                              recipe.instructions!.replaceAll(RegExp(r'<[^>]*>'), ''), // Simple HTML tag stripper
                               style: const TextStyle(fontSize: 15, height: 1.4),
                             )
                           else
