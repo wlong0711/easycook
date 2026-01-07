@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class SpoonacularService {
-  final String apiKey = '52a3569d728c4360aeec59f495f43626';
+  String get apiKey => dotenv.env['SPOONACULAR_API_KEY'] ?? '';
   final String baseUrl = 'https://api.spoonacular.com';
 
   // ✅ Fetch Random Recipes (with nutrition)

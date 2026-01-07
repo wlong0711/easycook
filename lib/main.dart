@@ -10,10 +10,12 @@ import 'viewmodels/favorite_recipes_viewmodel.dart';
 import 'viewmodels/meal_planner_viewmodel.dart';
 import 'viewmodels/shopping_list_viewmodel.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await dotenv.load(fileName: ".env");
 
   runApp(
     MultiProvider(
