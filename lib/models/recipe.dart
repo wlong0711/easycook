@@ -8,6 +8,7 @@ class Recipe {
   final List<Map<String, dynamic>> extendedIngredients;
   final Map<String, dynamic>? nutrition;
   final String? instructions;
+  final List<dynamic>? analyzedInstructions;
   final List<String>? dishTypes;
   final String? summary;
 
@@ -21,6 +22,7 @@ class Recipe {
     this.extendedIngredients = const [],
     this.nutrition,
     this.instructions,
+    this.analyzedInstructions,
     this.dishTypes,
     this.summary,
   });
@@ -36,6 +38,7 @@ class Recipe {
       extendedIngredients: List<Map<String, dynamic>>.from(json['extendedIngredients'] ?? []),
       nutrition: json['nutrition'],
       instructions: json['instructions'],
+      analyzedInstructions: json['analyzedInstructions'] ?? [],
       dishTypes: json['dishTypes'] != null ? List<String>.from(json['dishTypes']) : null,
       summary: json['summary'],
     );
@@ -52,6 +55,7 @@ class Recipe {
       'extendedIngredients': extendedIngredients,
       'nutrition': nutrition,
       'instructions': instructions,
+      'analyzedInstructions': analyzedInstructions,
       'dishTypes': dishTypes,
       'summary': summary,
     };
